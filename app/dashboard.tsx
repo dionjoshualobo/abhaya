@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,17 +7,13 @@ import {
   StatusBar,
   TouchableOpacity,
   Animated,
-  Vibration,
   Easing,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-// Vibration pattern: 500ms on, 300ms off — repeats
-const ALARM_PATTERN = [0, 500, 300];
-
 export default function DashboardScreen() {
-  const { username } = useLocalSearchParams<{ username: string }>();
+  const { username, phone } = useLocalSearchParams<{ username: string; phone: string }>();
   const router = useRouter();
 
   const [active, setActive] = useState(false);
@@ -29,7 +25,6 @@ export default function DashboardScreen() {
 
   function startAlarm() {
     setActive(true);
-    Vibration.vibrate(ALARM_PATTERN, true);
 
     pulseAnim.current = Animated.loop(
       Animated.parallel([
@@ -54,7 +49,6 @@ export default function DashboardScreen() {
 
   function stopAlarm() {
     setActive(false);
-    Vibration.cancel();
     pulseAnim.current?.stop();
     pulse1.setValue(1);
     pulse2.setValue(1);
@@ -63,8 +57,6 @@ export default function DashboardScreen() {
   function toggleAlarm() {
     active ? stopAlarm() : startAlarm();
   }
-
-  useEffect(() => () => { Vibration.cancel(); }, []);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -77,7 +69,7 @@ export default function DashboardScreen() {
           <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/settings')} activeOpacity={0.7}>
             <Ionicons name="settings-outline" size={26} color="#ccc" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.iconBtn} onPress={() => router.push({ pathname: '/profile', params: { username, phone } })} activeOpacity={0.7}>
             <Ionicons name="person-circle-outline" size={28} color="#ccc" />
           </TouchableOpacity>
         </View>

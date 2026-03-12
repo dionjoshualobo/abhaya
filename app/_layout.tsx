@@ -12,6 +12,7 @@ export default function RootLayout() {
       <Stack.Screen name="otp" />
       <Stack.Screen name="dashboard" />
       <Stack.Screen name="settings" />
+      <Stack.Screen name="profile" />
     </Stack>
   );
 }
