@@ -59,8 +59,9 @@ export default function DashboardScreen() {
         longitude = loc.coords.longitude;
       }
       await sendAlert(latitude, longitude);
-    } catch (e) {
-      Alert.alert('Alert Sent', 'SOS sent to your emergency contacts.');
+      Alert.alert('🚨 Alert Sent', 'SOS sent to your emergency contacts.');
+    } catch (e: any) {
+      Alert.alert('Failed', `Could not reach server: ${e?.message ?? e}`);
     }
   }
 
