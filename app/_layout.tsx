@@ -19,6 +19,8 @@ export default function RootLayout() {
     <Stack initialRouteName="index" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="home" />
+      <Stack.Screen name="otp" />
+      <Stack.Screen name="dashboard" />
     </Stack>
   );
 }
