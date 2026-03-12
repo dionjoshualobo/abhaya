@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// TODO: Change this to your machine's local IP when testing on a physical device
+// Change to your backend machine's local IP when testing on a physical device
 // e.g. 'http://192.168.x.x:5000'
-const BASE_URL = 'http://localhost:5000';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:5000';
 
 const api = axios.create({
   baseURL: BASE_URL,

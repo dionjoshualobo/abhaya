@@ -3,4 +3,13 @@ node_modules/
 .expo/
 dist/
 *.orig.*
+__pycache__/
+*.pyc
+backend/.env
+backend/venv/
+
+.env
+.expo/
+dist/
+*.orig.*
 
