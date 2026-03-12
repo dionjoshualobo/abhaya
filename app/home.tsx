@@ -44,7 +44,7 @@ export default function HomeScreen() {
     setError('');
     if (!username.trim()) { setError('Please enter your name.'); return; }
     if (!/^\d{10}$/.test(phone.trim())) { setError('Enter a valid 10-digit phone number.'); return; }
-    router.push({ pathname: '/otp', params: { username: username.trim(), phone: phone.trim() } });
+    router.replace({ pathname: '/dashboard', params: { username: username.trim(), phone: phone.trim() } });
   }
 
   return (
@@ -93,7 +93,7 @@ export default function HomeScreen() {
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <TouchableOpacity style={styles.btn} onPress={handleSendOtp} activeOpacity={0.8}>
-            <Text style={styles.btnText}>Send OTP</Text>
+            <Text style={styles.btnText}>Get Started</Text>
           </TouchableOpacity>
         </Animated.View>
       </KeyboardAvoidingView>

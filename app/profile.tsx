@@ -14,32 +14,40 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { addContact } from '../frontend/services/api';
 
-const GENDERS = ['Female', 'Male', 'Non-binary', 'Prefer not to say'];
-
 export default function ProfileScreen() {
   const router = useRouter();
   const { username, phone } = useLocalSearchParams<{ username: string; phone: string }>();
 
-  const [name,      setName]      = useState(username ?? '');
-  const [dob,       setDob]       = useState('');
-  const [gender,    setGender]    = useState('Female');
-  const [bloodGroup, setBloodGroup] = useState('');
+  const [name, setName] = useState(username ?? '');
   const [emergencyName,  setEmergencyName]  = useState('');
   const [emergencyPhone, setEmergencyPhone] = useState('');
+  const [saving, setSaving] = useState(false);
 
   async function handleSave() {
-    if (!name.trim()) { Alert.alert('Required', 'Name cannot be empty.'); return; }
-    if (emergencyPhone && !/^\+?\d{10,13}$/.test(emergencyPhone.trim())) {
-      Alert.alert('Invalid', 'Emergency contact must be a valid phone number.'); return;
+    if (!name.trim()) {
+      Alert.alert('Required', 'Name cannot be empty.');
+      return;
     }
+    if (!emergencyName.trim() && !emergencyPhone.trim()) {
+      Alert.alert('Nothing to save', 'Add an emergency contact to save, or just go back.');
+      return;
+    }
+    if (!/^\d{10}$/.test(emergencyPhone.trim())) {
+      Alert.alert('Invalid Number', 'Enter a valid 10-digit phone number for the emergency contact.');
+      return;
+    }
+
+    setSaving(true);
     try {
-      if (emergencyName.trim() && emergencyPhone.trim()) {
-        const phone = emergencyPhone.trim().startsWith('+') ? emergencyPhone.trim() : `+91${emergencyPhone.trim()}`;
-        await addContact(emergencyName.trim(), phone, 'Emergency Contact');
-      }
-      Alert.alert('Saved', 'Your profile has been updated.');
+      const fullPhone = `+91${emergencyPhone.trim()}`;
+      await addContact(emergencyName.trim(), fullPhone, 'Emergency Contact');
+      setEmergencyName('');
+      setEmergencyPhone('');
+      Alert.alert('Saved', `${emergencyName.trim()} added as an emergency contact.`);
     } catch (e) {
       Alert.alert('Error', 'Could not save contact. Is the backend running?');
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -88,45 +96,20 @@ export default function ProfileScreen() {
           <Ionicons name="lock-closed-outline" size={14} color="#555" />
         </View>
 
-        <Text style={styles.label}>Date of Birth</Text>
-        <TextInput
-          style={styles.input}
-          value={dob}
-          onChangeText={setDob}
-          placeholder="DD / MM / YYYY"
-          placeholderTextColor="#666"
-          keyboardType="number-pad"
-          underlineColorAndroid="transparent"
-        />
-
-        <Text style={styles.label}>Blood Group</Text>
-        <TextInput
-          style={styles.input}
-          value={bloodGroup}
-          onChangeText={setBloodGroup}
-          placeholder="e.g. B+"
-          placeholderTextColor="#666"
-          autoCapitalize="characters"
-          underlineColorAndroid="transparent"
-        />
-
-        {/* Gender */}
-        <Text style={styles.label}>Gender</Text>
-        <View style={styles.chipRow}>
-          {GENDERS.map(g => (
-            <TouchableOpacity
-              key={g}
-              style={[styles.chip, gender === g && styles.chipActive]}
-              onPress={() => setGender(g)}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.chipText, gender === g && styles.chipTextActive]}>{g}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* All Contacts shortcut */}
+        <TouchableOpacity
+          style={styles.contactsLink}
+          onPress={() => router.push('/contacts')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="people-outline" size={18} color="#c0392b" />
+          <Text style={styles.contactsLinkText}>Manage All Emergency Contacts</Text>
+          <Ionicons name="chevron-forward" size={16} color="#555" />
+        </TouchableOpacity>
 
         {/* Emergency Contact */}
-        <Text style={styles.section}>Emergency Contact</Text>
+        <Text style={styles.section}>Quick-Add Emergency Contact</Text>
+        <Text style={styles.sectionHint}>Adds one contact directly. Use "Manage All" above to view, edit or delete.</Text>
 
         <Text style={styles.label}>Contact Name</Text>
         <TextInput
@@ -155,8 +138,13 @@ export default function ProfileScreen() {
         </View>
 
         {/* Save */}
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
-          <Text style={styles.saveBtnText}>Save Profile</Text>
+        <TouchableOpacity
+          style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+          onPress={handleSave}
+          activeOpacity={0.85}
+          disabled={saving}
+        >
+          <Text style={styles.saveBtnText}>{saving ? 'Saving…' : 'Add Contact'}</Text>
         </TouchableOpacity>
 
       </ScrollView>
@@ -203,7 +191,13 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textTransform: 'uppercase',
     marginTop: 28,
-    marginBottom: 6,
+    marginBottom: 4,
+  },
+  sectionHint: {
+    fontSize: 12,
+    color: '#555',
+    marginBottom: 4,
+    lineHeight: 17,
   },
   label: {
     fontSize: 12,
@@ -237,6 +231,25 @@ const styles = StyleSheet.create({
   readonlyPrefix: { fontSize: 15, color: '#666' },
   readonlyValue:  { fontSize: 15, color: '#555', flex: 1 },
 
+  contactsLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#1e1e1e',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: '#2a2a2a',
+  },
+  contactsLinkText: {
+    flex: 1,
+    color: '#ddd',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   chip: {
     paddingHorizontal: 16,
@@ -269,5 +282,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 32,
   },
+  saveBtnDisabled: { opacity: 0.6 },
   saveBtnText: { color: '#fff', fontSize: 17, fontWeight: '700', letterSpacing: 0.5 },
 });

@@ -98,10 +98,19 @@ export default function DashboardScreen() {
   }
 
   function stopAlarm() {
-    setActive(false);
-    pulseAnim.current?.stop();
-    pulse1.setValue(1);
-    pulse2.setValue(1);
+    Alert.alert(
+      'Stop SOS?',
+      'Are you sure you want to stop the alarm?',
+      [
+        { text: 'Keep Active', style: 'cancel' },
+        { text: 'Stop', style: 'destructive', onPress: () => {
+          setActive(false);
+          pulseAnim.current?.stop();
+          pulse1.setValue(1);
+          pulse2.setValue(1);
+        }},
+      ]
+    );
   }
 
   function toggleAlarm() {
@@ -116,11 +125,14 @@ export default function DashboardScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Abhaya</Text>
         <View style={styles.headerIcons}>
+          <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/contacts')} activeOpacity={0.7}>
+            <Ionicons name="people-outline" size={24} color="#ccc" />
+          </TouchableOpacity>
           <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/settings')} activeOpacity={0.7}>
-            <Ionicons name="settings-outline" size={26} color="#ccc" />
+            <Ionicons name="settings-outline" size={24} color="#ccc" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconBtn} onPress={() => router.push({ pathname: '/profile', params: { username, phone } })} activeOpacity={0.7}>
-            <Ionicons name="person-circle-outline" size={28} color="#ccc" />
+            <Ionicons name="person-circle-outline" size={26} color="#ccc" />
           </TouchableOpacity>
         </View>
       </View>
@@ -164,10 +176,6 @@ export default function DashboardScreen() {
 
       {/* Feature nav grid */}
       <View style={styles.navGrid}>
-        <TouchableOpacity style={styles.navBtn} onPress={() => router.push('/contacts')} activeOpacity={0.8}>
-          <Ionicons name="people-outline" size={22} color="#c0392b" />
-          <Text style={styles.navLabel}>Contacts</Text>
-        </TouchableOpacity>
         <TouchableOpacity style={styles.navBtn} onPress={() => router.push('/places')} activeOpacity={0.8}>
           <Ionicons name="location-outline" size={22} color="#c0392b" />
           <Text style={styles.navLabel}>Safe Places</Text>
@@ -176,9 +184,9 @@ export default function DashboardScreen() {
           <Ionicons name="map-outline" size={22} color="#c0392b" />
           <Text style={styles.navLabel}>Heatmap</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navBtn} onPress={() => router.push('/settings')} activeOpacity={0.8}>
-          <Ionicons name="settings-outline" size={22} color="#c0392b" />
-          <Text style={styles.navLabel}>Settings</Text>
+        <TouchableOpacity style={styles.navBtn} onPress={() => router.push({ pathname: '/profile', params: { username, phone } })} activeOpacity={0.8}>
+          <Ionicons name="person-outline" size={22} color="#c0392b" />
+          <Text style={styles.navLabel}>Profile</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

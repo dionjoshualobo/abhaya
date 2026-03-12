@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,17 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const KEYS = {
+  vibration:     'setting_vibration',
+  locationShare: 'setting_locationShare',
+  notifications: 'setting_notifications',
+  autoAlert:     'setting_autoAlert',
+  stealthMode:   'setting_stealthMode',
+} as const;
+
+type SettingKey = keyof typeof KEYS;
 
 type SettingRowProps = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -42,14 +53,46 @@ function SettingRow({ icon, label, description, value, onToggle }: SettingRowPro
   );
 }
 
+const DEFAULTS: Record<SettingKey, boolean> = {
+  vibration:     true,
+  locationShare: false,
+  notifications: true,
+  autoAlert:     false,
+  stealthMode:   false,
+};
+
 export default function SettingsScreen() {
   const router = useRouter();
 
-  const [vibration,      setVibration]      = useState(true);
-  const [locationShare,  setLocationShare]  = useState(false);
-  const [notifications,  setNotifications]  = useState(true);
-  const [autoAlert,      setAutoAlert]      = useState(false);
-  const [stealthMode,    setStealthMode]    = useState(false);
+  const [settings, setSettings] = useState<Record<SettingKey, boolean>>(DEFAULTS);
+  const [loaded, setLoaded] = useState(false);
+
+  // Load all settings from AsyncStorage on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const pairs = await AsyncStorage.multiGet(Object.values(KEYS));
+        const loaded: Record<SettingKey, boolean> = { ...DEFAULTS };
+        pairs.forEach(([storageKey, value]) => {
+          const settingKey = (Object.entries(KEYS) as [SettingKey, string][])
+            .find(([, v]) => v === storageKey)?.[0];
+          if (settingKey && value !== null) {
+            loaded[settingKey] = value === 'true';
+          }
+        });
+        setSettings(loaded);
+      } finally {
+        setLoaded(true);
+      }
+    })();
+  }, []);
+
+  const toggle = useCallback(async (key: SettingKey, value: boolean) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+    await AsyncStorage.setItem(KEYS[key], String(value));
+  }, []);
+
+  if (!loaded) return null; // avoid flash of default state
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -72,22 +115,22 @@ export default function SettingsScreen() {
           icon="phone-portrait-outline"
           label="Vibration Alert"
           description="Vibrate phone when SOS is triggered"
-          value={vibration}
-          onToggle={setVibration}
+          value={settings.vibration}
+          onToggle={v => toggle('vibration', v)}
         />
         <SettingRow
           icon="timer-outline"
           label="Auto-Alert Contacts"
           description="Notify emergency contacts automatically"
-          value={autoAlert}
-          onToggle={setAutoAlert}
+          value={settings.autoAlert}
+          onToggle={v => toggle('autoAlert', v)}
         />
         <SettingRow
           icon="eye-off-outline"
           label="Stealth Mode"
           description="Trigger SOS without visible alarm"
-          value={stealthMode}
-          onToggle={setStealthMode}
+          value={settings.stealthMode}
+          onToggle={v => toggle('stealthMode', v)}
         />
 
         {/* Privacy Section */}
@@ -96,15 +139,15 @@ export default function SettingsScreen() {
           icon="location-outline"
           label="Share Location"
           description="Share live location during SOS"
-          value={locationShare}
-          onToggle={setLocationShare}
+          value={settings.locationShare}
+          onToggle={v => toggle('locationShare', v)}
         />
         <SettingRow
           icon="notifications-outline"
           label="Notifications"
           description="Allow push notifications"
-          value={notifications}
-          onToggle={setNotifications}
+          value={settings.notifications}
+          onToggle={v => toggle('notifications', v)}
         />
 
         <Text style={styles.footer}>Abhaya v1.0.0 — Your safety companion</Text>
