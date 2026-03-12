@@ -55,6 +55,33 @@ def add_place():
     return jsonify({'status': 'place_added', 'place': place.to_dict()}), 201
 
 
+@places_bp.route('/places/<int:place_id>', methods=['PUT'])
+def update_place(place_id):
+    """
+    PUT /places/<id> — update a safe place's details.
+    Body: {"label": "Work", "latitude": 12.99, "longitude": 77.59, "radius_meters": 300}  // all optional
+    """
+    place = SafePlace.query.get(place_id)
+    if not place:
+        return jsonify({'error': 'Place not found'}), 404
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Request body is required'}), 400
+
+    if 'label' in data and data['label'].strip():
+        place.label = data['label'].strip()
+    if 'latitude' in data:
+        place.latitude = data['latitude']
+    if 'longitude' in data:
+        place.longitude = data['longitude']
+    if 'radius_meters' in data:
+        place.radius_meters = data['radius_meters']
+
+    db.session.commit()
+    return jsonify({'status': 'place_updated', 'place': place.to_dict()}), 200
+
+
 @places_bp.route('/places/<int:place_id>', methods=['DELETE'])
 def delete_place(place_id):
     """DELETE /places/<id> — remove a safe place."""

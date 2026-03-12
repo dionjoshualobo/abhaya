@@ -4,11 +4,16 @@ from models import AnomalyLog, EmergencyContact
 from services.sms_service import send_sms
 from services.gemini_service import generate_sos_message
 from math import sqrt
+from datetime import datetime, timezone
 
 anomaly_bp = Blueprint('anomaly', __name__)
 
 # Magnitude threshold above which we consider it a real anomaly (struggle/attack)
 ANOMALY_THRESHOLD = 25.0
+
+# Cooldown: don't send another SMS alert within this many seconds
+COOLDOWN_SECONDS = 120
+_last_alert_time: datetime | None = None
 
 
 @anomaly_bp.route('/anomaly', methods=['POST'])
@@ -53,7 +58,26 @@ def detect_anomaly():
             'log_id': log.id
         }), 200
 
-    # Anomaly detected — auto-send SOS to all saved contacts
+    # Anomaly detected — check cooldown before sending SMS
+    global _last_alert_time
+    now = datetime.now(timezone.utc)
+
+    if _last_alert_time is not None:
+        elapsed = (now - _last_alert_time).total_seconds()
+        if elapsed < COOLDOWN_SECONDS:
+            return jsonify({
+                'anomaly_detected': True,
+                'magnitude': round(magnitude, 4),
+                'threshold': ANOMALY_THRESHOLD,
+                'alert_triggered': False,
+                'cooldown_active': True,
+                'retry_in_seconds': round(COOLDOWN_SECONDS - elapsed),
+                'log_id': log.id
+            }), 200
+
+    _last_alert_time = now
+
+    # Auto-send SOS to all saved contacts
     latitude = data.get('latitude', 0.0)
     longitude = data.get('longitude', 0.0)
 
