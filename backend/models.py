@@ -52,6 +52,7 @@ class HeatmapReport(db.Model):
     latitude = db.Column(db.Float, nullable=False)
     longitude = db.Column(db.Float, nullable=False)
     description = db.Column(db.String(255), nullable=True)
+    weight = db.Column(db.Float, default=1.0)  # heatmap intensity (1.0 = normal, higher = more dangerous)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
@@ -60,6 +61,7 @@ class HeatmapReport(db.Model):
             'latitude': self.latitude,
             'longitude': self.longitude,
             'description': self.description,
+            'weight': self.weight,
             'created_at': self.created_at.isoformat(),
         }
 
