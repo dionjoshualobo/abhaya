@@ -8,9 +8,12 @@ import {
   TouchableOpacity,
   Animated,
   Easing,
+  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
+import { sendAlert } from '../frontend/services/api';
 
 export default function DashboardScreen() {
   const { username, phone } = useLocalSearchParams<{ username: string; phone: string }>();
@@ -23,7 +26,7 @@ export default function DashboardScreen() {
   const btnScale = useRef(new Animated.Value(1)).current;
   const pulseAnim = useRef<Animated.CompositeAnimation | null>(null);
 
-  function startAlarm() {
+  async function startAlarm() {
     setActive(true);
 
     pulseAnim.current = Animated.loop(
@@ -45,6 +48,20 @@ export default function DashboardScreen() {
       Animated.timing(btnScale, { toValue: 0.92, duration: 100, useNativeDriver: true }),
       Animated.timing(btnScale, { toValue: 1,    duration: 100, useNativeDriver: true }),
     ]).start();
+
+    // Send SOS alert to backend
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      let latitude = 0, longitude = 0;
+      if (status === 'granted') {
+        const loc = await Location.getCurrentPositionAsync({});
+        latitude = loc.coords.latitude;
+        longitude = loc.coords.longitude;
+      }
+      await sendAlert(latitude, longitude);
+    } catch (e) {
+      Alert.alert('Alert Sent', 'SOS sent to your emergency contacts.');
+    }
   }
 
   function stopAlarm() {

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { addContact } from '../frontend/services/api';
 
 const GENDERS = ['Female', 'Male', 'Non-binary', 'Prefer not to say'];
 
@@ -26,12 +27,20 @@ export default function ProfileScreen() {
   const [emergencyName,  setEmergencyName]  = useState('');
   const [emergencyPhone, setEmergencyPhone] = useState('');
 
-  function handleSave() {
+  async function handleSave() {
     if (!name.trim()) { Alert.alert('Required', 'Name cannot be empty.'); return; }
-    if (emergencyPhone && !/^\d{10}$/.test(emergencyPhone.trim())) {
-      Alert.alert('Invalid', 'Emergency contact must be a 10-digit number.'); return;
+    if (emergencyPhone && !/^\+?\d{10,13}$/.test(emergencyPhone.trim())) {
+      Alert.alert('Invalid', 'Emergency contact must be a valid phone number.'); return;
     }
-    Alert.alert('Saved', 'Your profile has been updated.');
+    try {
+      if (emergencyName.trim() && emergencyPhone.trim()) {
+        const phone = emergencyPhone.trim().startsWith('+') ? emergencyPhone.trim() : `+91${emergencyPhone.trim()}`;
+        await addContact(emergencyName.trim(), phone, 'Emergency Contact');
+      }
+      Alert.alert('Saved', 'Your profile has been updated.');
+    } catch (e) {
+      Alert.alert('Error', 'Could not save contact. Is the backend running?');
+    }
   }
 
   return (
