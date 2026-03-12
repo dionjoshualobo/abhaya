@@ -65,7 +65,7 @@ export default function HomeScreen() {
         <Animated.View style={[styles.form, { opacity: formOpacity }]}>
           <Text style={styles.label}>Your Name</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: '#fff' }]}
             placeholder="Enter your name"
             placeholderTextColor="#555"
             value={username}
@@ -79,7 +79,7 @@ export default function HomeScreen() {
               <Text style={styles.countryText}>+91</Text>
             </View>
             <TextInput
-              style={[styles.input, styles.phoneInput]}
+              style={[styles.input, styles.phoneInput, { color: '#fff' }]}
               placeholder="10-digit number"
               placeholderTextColor="#555"
               value={phone}
