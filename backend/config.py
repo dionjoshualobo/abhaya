@@ -1,9 +1,7 @@
 import os
 
-# Twilio
-TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
-TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
-TWILIO_PHONE_NUMBER = os.getenv('TWILIO_PHONE_NUMBER')
+# Fast2SMS
+FAST2SMS_API_KEY = os.getenv('FAST2SMS_API_KEY')
 
 # Gemini
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
