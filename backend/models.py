@@ -22,6 +22,28 @@ class EmergencyContact(db.Model):
         }
 
 
+class SafePlace(db.Model):
+    """A known safe place saved by the user (home, work, college, etc.)."""
+    __tablename__ = 'safe_places'
+
+    id = db.Column(db.Integer, primary_key=True)
+    label = db.Column(db.String(100), nullable=False)   # e.g. "Home", "College"
+    latitude = db.Column(db.Float, nullable=False)
+    longitude = db.Column(db.Float, nullable=False)
+    radius_meters = db.Column(db.Float, default=200.0)  # safe zone radius
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'label': self.label,
+            'latitude': self.latitude,
+            'longitude': self.longitude,
+            'radius_meters': self.radius_meters,
+            'created_at': self.created_at.isoformat(),
+        }
+
+
 class HeatmapReport(db.Model):
     """A danger zone report submitted by a user."""
     __tablename__ = 'heatmap_reports'
