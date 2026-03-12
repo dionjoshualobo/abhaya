@@ -1,12 +1,12 @@
 import { Stack } from 'expo-router';
 
 export const unstable_settings = {
-  initialRouteName: 'index',
+  initialRouteName: 'home',
 };
 
 export default function RootLayout() {
   return (
-    <Stack initialRouteName="index" screenOptions={{ headerShown: false }}>
+    <Stack initialRouteName="home" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="home" />
       <Stack.Screen name="otp" />
