@@ -1,31 +1,24 @@
-import requests
-from config import FAST2SMS_API_KEY
-
-FAST2SMS_URL = 'https://www.fast2sms.com/dev/bulkV2'
+from twilio.rest import Client
+from config import TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER
 
 def send_sms(phone_numbers: list[str], message: str) -> dict:
     """
-    Send an SMS to a list of phone numbers via Fast2SMS.
-    phone_numbers: list of 10-digit Indian mobile numbers (no +91)
+    Send an SMS to a list of phone numbers via Twilio.
+    phone_numbers: list of numbers in E.164 format e.g. '+918073519575'
     message: the SMS body text
     """
-    if not FAST2SMS_API_KEY:
-        raise ValueError('FAST2SMS_API_KEY is not set in .env')
+    if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER]):
+        raise ValueError('Twilio credentials are not set in .env')
 
-    recipients = ','.join(phone_numbers)
+    client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+    results = []
 
-    payload = {
-        'message': message,
-        'language': 'english',
-        'route': 'q',
-        'numbers': recipients,
-    }
+    for number in phone_numbers:
+        msg = client.messages.create(
+            body=message,
+            from_=TWILIO_PHONE_NUMBER,
+            to=number
+        )
+        results.append({'to': number, 'sid': msg.sid, 'status': msg.status})
 
-    headers = {
-        'authorization': FAST2SMS_API_KEY,
-        'Content-Type': 'application/json',
-    }
-
-    response = requests.post(FAST2SMS_URL, json=payload, headers=headers, timeout=10)
-    response.raise_for_status()
-    return response.json()
+    return {'sent': results}
