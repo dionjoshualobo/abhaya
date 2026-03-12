@@ -25,6 +25,7 @@ from routes.heatmap import heatmap_bp
 from routes.anomaly import anomaly_bp
 from routes.contacts import contacts_bp
 from routes.places import places_bp
+from routes.checkin import checkin_bp
 
 app.register_blueprint(health_bp)
 app.register_blueprint(alert_bp)
@@ -32,6 +33,7 @@ app.register_blueprint(heatmap_bp)
 app.register_blueprint(anomaly_bp)
 app.register_blueprint(contacts_bp)
 app.register_blueprint(places_bp)
+app.register_blueprint(checkin_bp)
 
 # Create all tables on startup
 with app.app_context():

@@ -38,6 +38,31 @@ def add_contact():
     return jsonify({'status': 'contact_added', 'contact': contact.to_dict()}), 201
 
 
+@contacts_bp.route('/contacts/<int:contact_id>', methods=['PUT'])
+def update_contact(contact_id):
+    """
+    PUT /contacts/<id> — update a contact's details.
+    Body: {"name": "Mum", "phone": "+91...", "relation": "Mother"}  // all optional
+    """
+    contact = EmergencyContact.query.get(contact_id)
+    if not contact:
+        return jsonify({'error': 'Contact not found'}), 404
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Request body is required'}), 400
+
+    if 'name' in data and data['name'].strip():
+        contact.name = data['name'].strip()
+    if 'phone' in data and data['phone'].strip():
+        contact.phone = data['phone'].strip()
+    if 'relation' in data:
+        contact.relation = data['relation'].strip() or None
+
+    db.session.commit()
+    return jsonify({'status': 'contact_updated', 'contact': contact.to_dict()}), 200
+
+
 @contacts_bp.route('/contacts/<int:contact_id>', methods=['DELETE'])
 def delete_contact(contact_id):
     """DELETE /contacts/<id> — remove an emergency contact."""
