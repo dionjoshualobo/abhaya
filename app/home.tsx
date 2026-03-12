@@ -38,7 +38,7 @@ export default function HomeScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [titleY, formOpacity]);
 
   function handleSendOtp() {
     setError('');

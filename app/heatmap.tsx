@@ -16,7 +16,6 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { getHeatmap, reportDangerZone } from '../frontend/services/api';
 
-type HeatmapPoint = { latitude: number; longitude: number; weight: number };
 type Report = { id: number; latitude: number; longitude: number; description: string; weight: number; created_at: string };
 
 const WEIGHT_LABELS: Record<number, { label: string; color: string }> = {

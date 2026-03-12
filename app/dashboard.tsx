@@ -32,7 +32,7 @@ export default function DashboardScreen() {
   useEffect(() => {
     console.log(`[motion] shake detection armed (threshold=${SHAKE_THRESHOLD})`);
     // Start background motion detection (works even when app is backgrounded)
-    const bgSub = startBackgroundMotionDetection();
+    startBackgroundMotionDetection();
     
     Accelerometer.setUpdateInterval(200);
     const sub = Accelerometer.addListener(async ({ x, y, z }) => {
@@ -142,9 +142,12 @@ export default function DashboardScreen() {
       ]
     );
   }
-
   function toggleAlarm() {
-    active ? stopAlarm() : startAlarm();
+    if (active) {
+      stopAlarm();
+    } else {
+      startAlarm();
+    }
   }
 
   return (

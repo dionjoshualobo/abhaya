@@ -44,7 +44,7 @@ export default function ProfileScreen() {
       setEmergencyName('');
       setEmergencyPhone('');
       Alert.alert('Saved', `${emergencyName.trim()} added as an emergency contact.`);
-    } catch (e) {
+    } catch {
       Alert.alert('Error', 'Could not save contact. Is the backend running?');
     } finally {
       setSaving(false);
@@ -109,7 +109,7 @@ export default function ProfileScreen() {
 
         {/* Emergency Contact */}
         <Text style={styles.section}>Quick-Add Emergency Contact</Text>
-        <Text style={styles.sectionHint}>Adds one contact directly. Use "Manage All" above to view, edit or delete.</Text>
+        <Text style={styles.sectionHint}>Adds one contact directly. Use &quot;Manage All&quot; above to view, edit or delete.</Text>
 
         <Text style={styles.label}>Contact Name</Text>
         <TextInput
