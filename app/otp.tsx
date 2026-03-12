@@ -75,6 +75,7 @@ export default function OtpScreen() {
               key={i}
               ref={el => { inputs.current[i] = el; }}
               style={[styles.box, d ? styles.boxFilled : null, { color: '#fff' }]}
+              placeholderTextColor="#888"
               value={d}
               onChangeText={t => handleChange(t, i)}
               onKeyPress={e => handleKeyPress(e, i)}

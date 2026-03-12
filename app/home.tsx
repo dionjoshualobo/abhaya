@@ -65,12 +65,13 @@ export default function HomeScreen() {
         <Animated.View style={[styles.form, { opacity: formOpacity }]}>
           <Text style={styles.label}>Your Name</Text>
           <TextInput
-            style={[styles.input, { color: '#fff' }]}
+            style={styles.nameInput}
             placeholder="Enter your name"
-            placeholderTextColor="#555"
+            placeholderTextColor="#888"
             value={username}
             onChangeText={setUsername}
             autoCapitalize="words"
+            underlineColorAndroid="transparent"
           />
 
           <Text style={styles.label}>Phone Number</Text>
@@ -81,7 +82,7 @@ export default function HomeScreen() {
             <TextInput
               style={[styles.input, styles.phoneInput, { color: '#fff' }]}
               placeholder="10-digit number"
-              placeholderTextColor="#555"
+              placeholderTextColor="#888"
               value={phone}
               onChangeText={setPhone}
               keyboardType="number-pad"
@@ -143,9 +144,19 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
+  nameInput: {
+    backgroundColor: '#1e1e1e',
+    color: '#ffffff',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#2a2a2a',
+  },
   input: {
     backgroundColor: '#1e1e1e',
-    color: '#fff',
+    color: '#ffffff',
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
