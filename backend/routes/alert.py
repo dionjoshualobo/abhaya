@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from services.sms_service import send_sms
 from services.gemini_service import generate_sos_message
+from models import EmergencyContact
 
 alert_bp = Blueprint('alert', __name__)
 
@@ -9,9 +10,9 @@ def send_alert():
     """
     POST /alert
     Body: {
-        "contacts": [{"name": "Mum", "phone": "9876543210"}, ...],
         "latitude": 12.9716,
-        "longitude": 77.5946
+        "longitude": 77.5946,
+        "contacts": [{"name": "Mum", "phone": "+91..."}]  // optional, uses DB contacts if omitted
     }
     """
     data = request.get_json()
@@ -19,14 +20,22 @@ def send_alert():
     if not data:
         return jsonify({'error': 'Request body is required'}), 400
 
-    contacts = data.get('contacts', [])
     latitude = data.get('latitude')
     longitude = data.get('longitude')
 
-    if not contacts:
-        return jsonify({'error': 'At least one contact is required'}), 400
     if latitude is None or longitude is None:
         return jsonify({'error': 'latitude and longitude are required'}), 400
+
+    # Use contacts from request body, or fall back to saved DB contacts
+    contacts_in_body = data.get('contacts', [])
+    if contacts_in_body:
+        contacts = contacts_in_body
+    else:
+        db_contacts = EmergencyContact.query.all()
+        contacts = [{'name': c.name, 'phone': c.phone} for c in db_contacts]
+
+    if not contacts:
+        return jsonify({'error': 'No contacts found. Add contacts via POST /contacts or include them in the request.'}), 400
 
     phone_numbers = [c['phone'] for c in contacts if 'phone' in c]
     if not phone_numbers:
