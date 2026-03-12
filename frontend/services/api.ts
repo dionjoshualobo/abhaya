@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Laptop's local IP — phone and laptop must be on the same WiFi
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://172.20.214.43:5000';
+// Laptop's IP on phone hotspot network
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.73.213:5000';
 
 const api = axios.create({
   baseURL: BASE_URL,
