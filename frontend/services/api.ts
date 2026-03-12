@@ -1,10 +1,9 @@
 import axios from 'axios';
 
-// Laptop's IP on phone hotspot network
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.73.213:5000';
+const API_BASE_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5000').replace(/\/$/, '');
 
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: API_BASE_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -52,4 +51,5 @@ export const respondCheckin = (session_id: string, safe: boolean) =>
 export const pollCheckin = (session_id: string) =>
   api.post('/checkin/poll', { session_id });
 
+export { API_BASE_URL };
 export default api;

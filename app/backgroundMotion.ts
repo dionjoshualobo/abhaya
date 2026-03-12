@@ -7,11 +7,9 @@
 import { AppState, AppStateStatus } from 'react-native';
 import { Accelerometer } from 'expo-sensors';
 import * as Location from 'expo-location';
-import axios from 'axios';
+import { reportAnomaly } from '../frontend/services/api';
 
 const SHAKE_THRESHOLD = 5.0;  // MUST match backend ANOMALY_THRESHOLD and dashboard.tsx
-// Use env variable (set in .env as EXPO_PUBLIC_API_URL)
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:5000';
 
 let appState = 'active';
 let accelerometerSubscription: any = null;
@@ -56,13 +54,7 @@ export function startBackgroundMotionDetection() {
           lng = loc.coords.longitude;
         }
 
-        const res = await axios.post(`${API_URL}/anomaly`, {
-          x,
-          y,
-          z,
-          latitude: lat,
-          longitude: lng,
-        });
+        const res = await reportAnomaly(x, y, z, lat, lng);
 
         if (res.data.alert_sent) {
           console.log(`[bg-motion] SOS sent to ${res.data.contact_name}`);

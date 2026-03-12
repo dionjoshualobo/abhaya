@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,16 +9,38 @@ import {
   Animated,
   Easing,
   Alert,
+  PermissionsAndroid,
+  Platform,
+  NativeModules,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { Accelerometer } from 'expo-sensors';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Voice from '@react-native-voice/voice';
 import { sendAlert, reportAnomaly } from '../frontend/services/api';
 import { startBackgroundMotionDetection, stopBackgroundMotionDetection } from './backgroundMotion';
+import {
+  DEFAULT_VOICE_CODE_WORDS,
+  normalizeSpeechText,
+  parseVoiceCodeWords,
+  VOICE_SOS_STORAGE_KEYS,
+} from './voiceSosSettings';
 
 const SHAKE_THRESHOLD = 5.0;  // MUST match backend ANOMALY_THRESHOLD and backgroundMotion.ts
 const MOTION_LOG_INTERVAL_MS = 1000;
+const VOICE_LISTEN_DURATION_MS = 10000;
+const VOICE_COOLDOWN_MS = 12000;
+
+type RemovableSubscription = {
+  remove: () => void;
+};
+
+type VoiceDebugEvent = {
+  at: string;
+  message: string;
+};
 
 export default function DashboardScreen() {
   const { username, phone } = useLocalSearchParams<{ username: string; phone: string }>();
@@ -27,6 +49,276 @@ export default function DashboardScreen() {
   const [active, setActive] = useState(false);
   const shakeRef = useRef(false); // prevent duplicate triggers
   const lastMotionLogAt = useRef(0);
+  const lastVolumeRef = useRef<number | null>(null);
+  const voiceListeningRef = useRef(false);
+  const voiceMatchedRef = useRef(false);
+  const voiceCooldownUntilRef = useRef(0);
+  const voiceStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [voiceDebugListening, setVoiceDebugListening] = useState(false);
+  const [voiceDebugEnabled, setVoiceDebugEnabled] = useState(false);
+  const [voiceDebugConfiguredWords, setVoiceDebugConfiguredWords] = useState<string[]>(DEFAULT_VOICE_CODE_WORDS);
+  const [voiceDebugHeard, setVoiceDebugHeard] = useState<string[]>([]);
+  const [voiceDebugNormalizedHeard, setVoiceDebugNormalizedHeard] = useState<string[]>([]);
+  const [voiceDebugMatchedWord, setVoiceDebugMatchedWord] = useState<string | null>(null);
+  const [voiceDebugEvents, setVoiceDebugEvents] = useState<VoiceDebugEvent[]>([]);
+  const [voiceNativeReady, setVoiceNativeReady] = useState(false);
+
+  const appendVoiceDebugEvent = useCallback((message: string) => {
+    const now = new Date();
+    const at = now.toLocaleTimeString();
+    setVoiceDebugEvents((prev) => [{ at, message }, ...prev].slice(0, 8));
+  }, []);
+
+  const isVoiceNativeAvailable = useCallback(() => {
+    return Boolean((NativeModules as { Voice?: unknown }).Voice);
+  }, []);
+
+  const sendVoiceAlert = useCallback(async () => {
+    let latitude = 0;
+    let longitude = 0;
+
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status === 'granted') {
+      const loc = await Location.getCurrentPositionAsync({});
+      latitude = loc.coords.latitude;
+      longitude = loc.coords.longitude;
+    }
+
+    await sendAlert(latitude, longitude);
+    Alert.alert('Voice SOS Sent', 'Code word matched. Alert sent to your emergency contacts.');
+  }, []);
+
+  const stopVoiceListening = useCallback(async () => {
+    if (voiceStopTimerRef.current) {
+      clearTimeout(voiceStopTimerRef.current);
+      voiceStopTimerRef.current = null;
+    }
+
+    if (!voiceListeningRef.current) {
+      return;
+    }
+
+    voiceListeningRef.current = false;
+    setVoiceDebugListening(false);
+    try {
+      await Voice.stop();
+    } catch {
+      // ignore if already stopped
+    }
+    console.log('[voice-sos] listening window closed');
+    appendVoiceDebugEvent('Listening window closed');
+  }, [appendVoiceDebugEvent]);
+
+  const startVoiceListeningWindow = useCallback(async () => {
+    if (voiceListeningRef.current) {
+      return;
+    }
+
+    if (Date.now() < voiceCooldownUntilRef.current) {
+      return;
+    }
+
+    if (!isVoiceNativeAvailable()) {
+      setVoiceNativeReady(false);
+      appendVoiceDebugEvent('Voice native module unavailable (NativeModules.Voice is null)');
+      Alert.alert('Voice SOS Unavailable', 'Voice module is not linked in this build. Reinstall debug app.');
+      return;
+    }
+
+    setVoiceNativeReady(true);
+
+    const enabledRaw = await AsyncStorage.getItem(VOICE_SOS_STORAGE_KEYS.enabled);
+    const isEnabled = enabledRaw === 'true';
+    setVoiceDebugEnabled(isEnabled);
+    if (!isEnabled) {
+      appendVoiceDebugEvent('Voice SOS disabled in settings');
+      return;
+    }
+
+    if (Platform.OS === 'android') {
+      const permission = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
+      if (permission !== PermissionsAndroid.RESULTS.GRANTED) {
+        Alert.alert('Microphone Permission', 'Enable microphone permission for voice SOS.');
+        appendVoiceDebugEvent('Microphone permission denied');
+        return;
+      }
+    }
+
+    const rawCodeWords = await AsyncStorage.getItem(VOICE_SOS_STORAGE_KEYS.codeWords);
+    const configuredWords = parseVoiceCodeWords(rawCodeWords);
+    setVoiceDebugConfiguredWords(configuredWords);
+    setVoiceDebugHeard([]);
+    setVoiceDebugNormalizedHeard([]);
+    setVoiceDebugMatchedWord(null);
+
+    voiceMatchedRef.current = false;
+    voiceListeningRef.current = true;
+    setVoiceDebugListening(true);
+    voiceCooldownUntilRef.current = Date.now() + VOICE_COOLDOWN_MS;
+
+    console.log('[voice-sos] volume down pressed, listening for 10s');
+    appendVoiceDebugEvent('Volume down detected, started 10s listening');
+    Alert.alert('Voice SOS Active', 'Listening for code word for 10 seconds.');
+
+    try {
+      await Voice.start('en-US');
+    } catch (error: any) {
+      voiceListeningRef.current = false;
+      setVoiceDebugListening(false);
+      console.log(`[voice-sos] failed to start voice recognition: ${error?.message ?? error}`);
+      appendVoiceDebugEvent(`Voice start failed: ${error?.message ?? error}`);
+      return;
+    }
+
+    voiceStopTimerRef.current = setTimeout(() => {
+      void stopVoiceListening();
+    }, VOICE_LISTEN_DURATION_MS);
+  }, [appendVoiceDebugEvent, isVoiceNativeAvailable, stopVoiceListening]);
+
+  const processVoiceResults = useCallback(async (results: string[]) => {
+    if (!voiceListeningRef.current || voiceMatchedRef.current) {
+      return;
+    }
+
+    const rawCodeWords = await AsyncStorage.getItem(VOICE_SOS_STORAGE_KEYS.codeWords);
+    const configuredWords = parseVoiceCodeWords(rawCodeWords);
+    setVoiceDebugConfiguredWords(configuredWords);
+
+    const normalizedWords = configuredWords.map((word) => normalizeSpeechText(word));
+    const normalizedResults = results.map((line) => normalizeSpeechText(line));
+    setVoiceDebugHeard(results);
+    setVoiceDebugNormalizedHeard(normalizedResults);
+
+    let matchedWord: string | null = null;
+    for (const line of normalizedResults) {
+      const found = normalizedWords.find((word) => word.length > 0 && line.includes(word));
+      if (found) {
+        matchedWord = found;
+        break;
+      }
+    }
+
+    const matched = matchedWord !== null;
+
+    if (matchedWord) {
+      setVoiceDebugMatchedWord(matchedWord);
+    }
+
+    if (!matched) {
+      appendVoiceDebugEvent('No code word match yet');
+      return;
+    }
+
+    voiceMatchedRef.current = true;
+    console.log('[voice-sos] code word matched, sending SOS alert');
+    appendVoiceDebugEvent(`Code word matched: "${matchedWord}"`);
+
+    try {
+      await sendVoiceAlert();
+      appendVoiceDebugEvent('SOS sent successfully from voice trigger');
+    } catch (error: any) {
+      Alert.alert('Voice SOS Failed', `Could not send alert: ${error?.message ?? error}`);
+      appendVoiceDebugEvent(`SOS send failed: ${error?.message ?? error}`);
+    } finally {
+      await stopVoiceListening();
+    }
+  }, [appendVoiceDebugEvent, sendVoiceAlert, stopVoiceListening]);
+
+  useEffect(() => {
+    const codeWordsDefault = DEFAULT_VOICE_CODE_WORDS.join(', ');
+    const nativeAvailable = isVoiceNativeAvailable();
+    setVoiceNativeReady(nativeAvailable);
+    if (nativeAvailable) {
+      appendVoiceDebugEvent('Voice native module detected');
+    } else {
+      appendVoiceDebugEvent('Voice native module missing (NativeModules.Voice is null)');
+    }
+
+    AsyncStorage.getItem(VOICE_SOS_STORAGE_KEYS.codeWords).then((value) => {
+      if (!value) {
+        return AsyncStorage.setItem(VOICE_SOS_STORAGE_KEYS.codeWords, codeWordsDefault);
+      }
+      setVoiceDebugConfiguredWords(parseVoiceCodeWords(value));
+      return null;
+    }).catch(() => {
+      // ignore seed errors
+    });
+
+    AsyncStorage.getItem(VOICE_SOS_STORAGE_KEYS.enabled).then((value) => {
+      setVoiceDebugEnabled(value === 'true');
+    }).catch(() => {
+      // ignore read errors
+    });
+
+    Voice.onSpeechResults = (event) => {
+      const values = event.value ?? [];
+      console.log('[voice-sos] heard:', values);
+      appendVoiceDebugEvent(`Speech result: ${values.join(' | ') || '(empty)'}`);
+      void processVoiceResults(values);
+    };
+
+    Voice.onSpeechError = (event) => {
+      console.log('[voice-sos] speech error:', event.error?.message);
+      appendVoiceDebugEvent(`Speech error: ${event.error?.message ?? 'unknown'}`);
+    };
+
+    let volumeSubscription: RemovableSubscription = { remove: () => {} };
+    let effectDisposed = false;
+
+    void (async () => {
+      try {
+        const volumeModule = await import('react-native-volume-manager');
+        const addVolumeListener = volumeModule?.VolumeManager?.addVolumeListener;
+
+        if (typeof addVolumeListener !== 'function') {
+          console.log('[voice-sos] volume listener unavailable in current native build');
+          appendVoiceDebugEvent('Volume listener unavailable in current native build');
+          return;
+        }
+
+        appendVoiceDebugEvent('Volume listener attached');
+
+        const nextSubscription = addVolumeListener((result: { volume?: number }) => {
+          const currentVolume = result.volume ?? 0;
+          const previousVolume = lastVolumeRef.current;
+          lastVolumeRef.current = currentVolume;
+
+          if (previousVolume === null) {
+            return;
+          }
+
+          const volumeDownPressed = currentVolume < previousVolume;
+          if (volumeDownPressed) {
+            appendVoiceDebugEvent(`Volume down: ${previousVolume.toFixed(2)} -> ${currentVolume.toFixed(2)}`);
+            void startVoiceListeningWindow();
+          }
+        });
+
+        if (effectDisposed) {
+          nextSubscription.remove();
+          return;
+        }
+
+        volumeSubscription = nextSubscription;
+      } catch (error: any) {
+        console.log(`[voice-sos] volume module unavailable: ${error?.message ?? error}`);
+        appendVoiceDebugEvent(`Volume module unavailable: ${error?.message ?? error}`);
+      }
+    })();
+
+    return () => {
+      effectDisposed = true;
+      volumeSubscription.remove();
+      if (isVoiceNativeAvailable()) {
+        Voice.destroy().then(Voice.removeAllListeners).catch(() => {
+          // ignore cleanup errors
+        });
+      }
+      if (voiceStopTimerRef.current) {
+        clearTimeout(voiceStopTimerRef.current);
+      }
+    };
+  }, [appendVoiceDebugEvent, isVoiceNativeAvailable, processVoiceResults, startVoiceListeningWindow]);
 
   // Shake detection
   useEffect(() => {
@@ -178,6 +470,27 @@ export default function DashboardScreen() {
         Hello, <Text style={styles.name}>{username ?? 'User'}</Text>
       </Text>
 
+      <View style={styles.voiceDebugCard}>
+        <Text style={styles.voiceDebugTitle}>Voice SOS Debug</Text>
+        <Text style={styles.voiceDebugLine}>Enabled: {voiceDebugEnabled ? 'ON' : 'OFF'}</Text>
+        <Text style={styles.voiceDebugLine}>Native module: {voiceNativeReady ? 'READY' : 'MISSING'}</Text>
+        <Text style={styles.voiceDebugLine}>Listening: {voiceDebugListening ? 'YES (10s window)' : 'NO'}</Text>
+        <Text style={styles.voiceDebugLine}>Configured words: {voiceDebugConfiguredWords.join(', ') || '(none)'}</Text>
+        <Text style={styles.voiceDebugLine}>Heard: {voiceDebugHeard.join(' | ') || '(no speech yet)'}</Text>
+        <Text style={styles.voiceDebugLine}>Normalized: {voiceDebugNormalizedHeard.join(' | ') || '(none)'}</Text>
+        <Text style={styles.voiceDebugLine}>Matched word: {voiceDebugMatchedWord ?? '(no match yet)'}</Text>
+        <Text style={styles.voiceDebugEventsTitle}>Recent events</Text>
+        {voiceDebugEvents.length === 0 ? (
+          <Text style={styles.voiceDebugEvent}>(no events yet)</Text>
+        ) : (
+          voiceDebugEvents.map((event, index) => (
+            <Text key={`${event.at}-${index}`} style={styles.voiceDebugEvent}>
+              {event.at} • {event.message}
+            </Text>
+          ))
+        )}
+      </View>
+
       {/* SOS Button */}
       <View style={styles.sosArea}>
         {active && (
@@ -248,6 +561,38 @@ const styles = StyleSheet.create({
   iconBtn:     { padding: 6 },
   greeting:    { fontSize: 16, color: '#888', paddingHorizontal: 24, marginBottom: 8 },
   name:        { color: '#fff', fontWeight: '600' },
+  voiceDebugCard: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: '#1a1a1a',
+    borderWidth: 1,
+    borderColor: '#2f2f2f',
+  },
+  voiceDebugTitle: {
+    color: '#f1f1f1',
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  voiceDebugLine: {
+    color: '#cfcfcf',
+    fontSize: 12,
+    marginBottom: 3,
+  },
+  voiceDebugEventsTitle: {
+    color: '#f1f1f1',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  voiceDebugEvent: {
+    color: '#a7a7a7',
+    fontSize: 11,
+    marginBottom: 2,
+  },
   sosArea: {
     flex: 1,
     alignItems: 'center',

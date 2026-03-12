@@ -8,10 +8,15 @@ import {
   Switch,
   ScrollView,
   TouchableOpacity,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  VOICE_SOS_STORAGE_KEYS,
+  DEFAULT_VOICE_CODE_WORDS,
+} from './voiceSosSettings';
 
 const KEYS = {
   vibration:     'setting_vibration',
@@ -19,6 +24,7 @@ const KEYS = {
   notifications: 'setting_notifications',
   autoAlert:     'setting_autoAlert',
   stealthMode:   'setting_stealthMode',
+  voiceSOS:      VOICE_SOS_STORAGE_KEYS.enabled,
 } as const;
 
 type SettingKey = keyof typeof KEYS;
@@ -59,12 +65,14 @@ const DEFAULTS: Record<SettingKey, boolean> = {
   notifications: true,
   autoAlert:     false,
   stealthMode:   false,
+  voiceSOS:      false,
 };
 
 export default function SettingsScreen() {
   const router = useRouter();
 
   const [settings, setSettings] = useState<Record<SettingKey, boolean>>(DEFAULTS);
+  const [voiceCodeWords, setVoiceCodeWords] = useState(DEFAULT_VOICE_CODE_WORDS.join(', '));
   const [loaded, setLoaded] = useState(false);
 
   // Load all settings from AsyncStorage on mount
@@ -80,6 +88,10 @@ export default function SettingsScreen() {
             loaded[settingKey] = value === 'true';
           }
         });
+        const storedCodeWords = await AsyncStorage.getItem(VOICE_SOS_STORAGE_KEYS.codeWords);
+        if (storedCodeWords && storedCodeWords.trim().length > 0) {
+          setVoiceCodeWords(storedCodeWords);
+        }
         setSettings(loaded);
       } finally {
         setLoaded(true);
@@ -91,6 +103,17 @@ export default function SettingsScreen() {
     setSettings(prev => ({ ...prev, [key]: value }));
     await AsyncStorage.setItem(KEYS[key], String(value));
   }, []);
+
+  const saveVoiceCodeWords = useCallback(async () => {
+    const sanitized = voiceCodeWords.trim();
+    if (!sanitized) {
+      await AsyncStorage.setItem(VOICE_SOS_STORAGE_KEYS.codeWords, DEFAULT_VOICE_CODE_WORDS.join(', '));
+      setVoiceCodeWords(DEFAULT_VOICE_CODE_WORDS.join(', '));
+      return;
+    }
+
+    await AsyncStorage.setItem(VOICE_SOS_STORAGE_KEYS.codeWords, sanitized);
+  }, [voiceCodeWords]);
 
   if (!loaded) return null; // avoid flash of default state
 
@@ -132,6 +155,30 @@ export default function SettingsScreen() {
           value={settings.stealthMode}
           onToggle={v => toggle('stealthMode', v)}
         />
+
+        <Text style={styles.section}>Voice SOS</Text>
+        <SettingRow
+          icon="mic-outline"
+          label="Voice Activation"
+          description="Press volume down to listen for 10 seconds"
+          value={settings.voiceSOS}
+          onToggle={v => toggle('voiceSOS', v)}
+        />
+
+        <View style={styles.voiceBox}>
+          <Text style={styles.voiceLabel}>Code Words</Text>
+          <Text style={styles.voiceDesc}>Comma-separated words or phrases. Example: help me, abhaya</Text>
+          <TextInput
+            style={styles.voiceInput}
+            value={voiceCodeWords}
+            onChangeText={setVoiceCodeWords}
+            onBlur={saveVoiceCodeWords}
+            placeholder="help me, abhaya"
+            placeholderTextColor="#666"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        </View>
 
         {/* Privacy Section */}
         <Text style={styles.section}>Privacy</Text>
@@ -202,5 +249,23 @@ const styles = StyleSheet.create({
   rowText:  { flex: 1 },
   rowLabel: { fontSize: 15, fontWeight: '600', color: '#fff' },
   rowDesc:  { fontSize: 12, color: '#666', marginTop: 2 },
+  voiceBox: {
+    backgroundColor: '#1e1e1e',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 8,
+  },
+  voiceLabel: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  voiceDesc: { color: '#666', fontSize: 12, marginTop: 4, marginBottom: 10 },
+  voiceInput: {
+    color: '#fff',
+    backgroundColor: '#111',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#2a2a2a',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    fontSize: 14,
+  },
   footer:   { textAlign: 'center', color: '#444', fontSize: 12, marginTop: 36 },
 });
