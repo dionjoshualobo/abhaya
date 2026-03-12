@@ -9,8 +9,9 @@ import { Accelerometer } from 'expo-sensors';
 import * as Location from 'expo-location';
 import axios from 'axios';
 
-const SHAKE_THRESHOLD = 5.0;
-const API_URL = 'http://10.0.2.2:5000'; // Android emulator localhost, change to your IP for real device
+const SHAKE_THRESHOLD = 5.0;  // MUST match backend ANOMALY_THRESHOLD and dashboard.tsx
+// Use env variable (set in .env as EXPO_PUBLIC_API_URL)
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:5000';
 
 let appState = 'active';
 let accelerometerSubscription: any = null;
@@ -63,9 +64,16 @@ export function startBackgroundMotionDetection() {
           longitude: lng,
         });
 
-        console.log(`[bg-motion] report sent, alert_sent=${res.data.alert_sent}`);
+        if (res.data.alert_sent) {
+          console.log(`[bg-motion] SOS sent to ${res.data.contact_name}`);
+        } else if (res.data.cooldown_active) {
+          console.log(`[bg-motion] cooldown active, retry in ${res.data.retry_in_seconds}s`);
+        } else {
+          console.log(`[bg-motion] alert not sent: ${res.data.sms_error}`);
+        }
       } catch (error: any) {
-        console.log(`[bg-motion] report failed: ${error.message}`);
+        const msg = error?.message ?? String(error);
+        console.log(`[bg-motion] report failed: ${msg}`);
       }
     }
   });

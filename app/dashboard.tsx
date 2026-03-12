@@ -17,7 +17,7 @@ import { Accelerometer } from 'expo-sensors';
 import { sendAlert, reportAnomaly } from '../frontend/services/api';
 import { startBackgroundMotionDetection, stopBackgroundMotionDetection } from './backgroundMotion';
 
-const SHAKE_THRESHOLD = 8.0;
+const SHAKE_THRESHOLD = 5.0;  // MUST match backend ANOMALY_THRESHOLD and backgroundMotion.ts
 const MOTION_LOG_INTERVAL_MS = 1000;
 
 export default function DashboardScreen() {
@@ -68,11 +68,15 @@ export default function DashboardScreen() {
           if (res.data.alert_sent) {
             const contactName = res.data.contact_name || 'contacts';
             Alert.alert('🚨 SOS Sent', `Alert sent to ${contactName}`);
+          } else if (res.data.cooldown_active) {
+            console.log(`[motion] alert not sent - cooldown active, retry in ${res.data.retry_in_seconds}s`);
           } else {
-            console.log(`[motion] alert not sent - check cooldown or contacts`);
+            Alert.alert('⚠️ SOS Not Sent', res.data.sms_error || 'Check your emergency contacts.');
           }
         } catch (error: any) {
-          console.log(`[motion] anomaly report failed: ${error?.message ?? error}`);
+          const msg = error?.message ?? String(error);
+          console.log(`[motion] anomaly report failed: ${msg}`);
+          Alert.alert('❌ Error', `Failed to send SOS: ${msg}`);
         }
       }
     });

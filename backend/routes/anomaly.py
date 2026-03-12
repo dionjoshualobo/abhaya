@@ -98,18 +98,22 @@ def detect_anomaly():
             print(f'[anomaly] generated message: {message_sent}')
             sms_result = send_sms(phone_numbers, message_sent)
             print(f'[anomaly] SMS sent successfully: {sms_result}')
+            # Check if SMS actually succeeded (has sent results)
+            sms_success = sms_result and 'sent' in sms_result and len(sms_result['sent']) > 0
         except Exception as e:
             sms_error = str(e)
+            sms_success = False
             print(f'[anomaly] SMS ERROR: {sms_error}')
     else:
         sms_error = 'No emergency contacts saved. Add contacts via POST /contacts.'
+        sms_success = False
         print(f'[anomaly] ERROR: {sms_error}')
 
     return jsonify({
         'anomaly_detected': True,
         'magnitude': round(magnitude, 4),
         'threshold': ANOMALY_THRESHOLD,
-        'alert_sent': contact_name is not None and sms_result is not None,
+        'alert_sent': sms_success,
         'alert_triggered': True,
         'contact_name': contact_name,
         'message_sent': message_sent,
