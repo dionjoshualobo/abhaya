@@ -11,6 +11,7 @@ export default function RootLayout() {
       <Stack.Screen name="home" />
       <Stack.Screen name="otp" />
       <Stack.Screen name="dashboard" />
+      <Stack.Screen name="settings" />
     </Stack>
   );
 }
