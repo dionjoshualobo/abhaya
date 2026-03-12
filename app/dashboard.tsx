@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -13,13 +13,45 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import { sendAlert } from '../frontend/services/api';
+import { Accelerometer } from 'expo-sensors';
+import { sendAlert, reportAnomaly } from '../frontend/services/api';
+
+const SHAKE_THRESHOLD = 25.0;
 
 export default function DashboardScreen() {
   const { username, phone } = useLocalSearchParams<{ username: string; phone: string }>();
   const router = useRouter();
 
   const [active, setActive] = useState(false);
+  const shakeRef = useRef(false); // prevent duplicate triggers
+
+  // Shake detection
+  useEffect(() => {
+    Accelerometer.setUpdateInterval(200);
+    const sub = Accelerometer.addListener(async ({ x, y, z }) => {
+      const magnitude = Math.sqrt(x * x + y * y + z * z);
+      if (magnitude >= SHAKE_THRESHOLD && !shakeRef.current) {
+        shakeRef.current = true;
+        setTimeout(() => { shakeRef.current = false; }, 5000); // 5s local cooldown
+
+        // Get location then report
+        try {
+          let lat = 0, lng = 0;
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status === 'granted') {
+            const loc = await Location.getCurrentPositionAsync({});
+            lat = loc.coords.latitude;
+            lng = loc.coords.longitude;
+          }
+          const res = await reportAnomaly(x, y, z, lat, lng);
+          if (res.data.alert_sent) {
+            Alert.alert('🚨 Shake Detected', 'Sudden movement detected — SOS sent to your emergency contacts.');
+          }
+        } catch { /* silent — backend cooldown handles duplicates */ }
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   const pulse1   = useRef(new Animated.Value(1)).current;
   const pulse2   = useRef(new Animated.Value(1)).current;
@@ -129,11 +161,31 @@ export default function DashboardScreen() {
       {active && (
         <Text style={styles.alarmBanner}>🚨  ALARM ACTIVE — Help is on the way</Text>
       )}
+
+      {/* Feature nav grid */}
+      <View style={styles.navGrid}>
+        <TouchableOpacity style={styles.navBtn} onPress={() => router.push('/contacts')} activeOpacity={0.8}>
+          <Ionicons name="people-outline" size={22} color="#c0392b" />
+          <Text style={styles.navLabel}>Contacts</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navBtn} onPress={() => router.push('/places')} activeOpacity={0.8}>
+          <Ionicons name="location-outline" size={22} color="#c0392b" />
+          <Text style={styles.navLabel}>Safe Places</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navBtn} onPress={() => router.push('/heatmap')} activeOpacity={0.8}>
+          <Ionicons name="map-outline" size={22} color="#c0392b" />
+          <Text style={styles.navLabel}>Heatmap</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navBtn} onPress={() => router.push('/settings')} activeOpacity={0.8}>
+          <Ionicons name="settings-outline" size={22} color="#c0392b" />
+          <Text style={styles.navLabel}>Settings</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
 
-const BTN_SIZE  = 220;
+const BTN_SIZE  = 200;
 const RING_SIZE = BTN_SIZE + 60;
 
 const styles = StyleSheet.create({
@@ -156,6 +208,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  navGrid: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    gap: 10,
+  },
+  navBtn: {
+    flex: 1,
+    backgroundColor: '#1e1e1e',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#2a2a2a',
+  },
+  navLabel: { color: '#ccc', fontSize: 11, fontWeight: '600', textAlign: 'center' },
   ring: {
     position: 'absolute',
     width: RING_SIZE,

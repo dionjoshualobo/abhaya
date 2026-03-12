@@ -13,6 +13,9 @@ export default function RootLayout() {
       <Stack.Screen name="dashboard" />
       <Stack.Screen name="settings" />
       <Stack.Screen name="profile" />
+      <Stack.Screen name="contacts" />
+      <Stack.Screen name="places" />
+      <Stack.Screen name="heatmap" />
     </Stack>
   );
 }
