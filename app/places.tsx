@@ -25,7 +25,7 @@ export default function PlacesScreen() {
   const [loading,  setLoading]  = useState(true);
   const [adding,   setAdding]   = useState(false);
   const [checking, setChecking] = useState(false);
-  const [safetyStatus, setSafetyStatus] = useState<{ status: string; nearest_place: string; distance_meters: number } | null>(null);
+  const [safetyStatus, setSafetyStatus] = useState<{ status: string; place?: any; nearest_place?: any; distance_meters: number } | null>(null);
 
   const [label,   setLabel]   = useState('');
   const [radius,  setRadius]  = useState('200');
@@ -138,7 +138,7 @@ export default function PlacesScreen() {
               <View>
                 <Text style={styles.statusText}>{isSafe ? '✅ You are SAFE' : '⚠️ SUSPICIOUS area'}</Text>
                 <Text style={styles.statusSub}>
-                  Nearest: {safetyStatus.nearest_place} · {Math.round(safetyStatus.distance_meters)}m away
+                  Nearest: {(safetyStatus.place ?? safetyStatus.nearest_place)?.label ?? 'Unknown'} · {Math.round(safetyStatus.distance_meters)}m away
                 </Text>
               </View>
             </View>

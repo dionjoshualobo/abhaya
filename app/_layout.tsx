@@ -8,6 +8,7 @@ export default function RootLayout() {
   return (
     <Stack initialRouteName="home" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="home" />
+      <Stack.Screen name="otp" />
       <Stack.Screen name="dashboard" />
       <Stack.Screen name="settings" />
       <Stack.Screen name="profile" />

@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 anomaly_bp = Blueprint('anomaly', __name__)
 
 # Magnitude threshold above which we consider it a real anomaly (struggle/attack)
-ANOMALY_THRESHOLD = 25.0
+ANOMALY_THRESHOLD = 5.0
 
 # Cooldown: don't send another SMS alert within this many seconds
 COOLDOWN_SECONDS = 120
@@ -84,23 +84,35 @@ def detect_anomaly():
     contacts = EmergencyContact.query.all()
     sms_result = None
     sms_error = None
+    contact_name = None
+    message_sent = None
+
+    print(f'[anomaly] shake detected! magnitude={magnitude:.2f}, contacts_found={len(contacts)}')
 
     if contacts:
+        contact_name = contacts[0].name
         phone_numbers = [c.phone for c in contacts]
-        first_name = contacts[0].name
+        print(f'[anomaly] sending SMS to {len(phone_numbers)} numbers')
         try:
-            message = generate_sos_message(latitude, longitude, first_name)
-            sms_result = send_sms(phone_numbers, message)
+            message_sent = generate_sos_message(latitude, longitude, contact_name)
+            print(f'[anomaly] generated message: {message_sent}')
+            sms_result = send_sms(phone_numbers, message_sent)
+            print(f'[anomaly] SMS sent successfully: {sms_result}')
         except Exception as e:
             sms_error = str(e)
+            print(f'[anomaly] SMS ERROR: {sms_error}')
     else:
         sms_error = 'No emergency contacts saved. Add contacts via POST /contacts.'
+        print(f'[anomaly] ERROR: {sms_error}')
 
     return jsonify({
         'anomaly_detected': True,
         'magnitude': round(magnitude, 4),
         'threshold': ANOMALY_THRESHOLD,
+        'alert_sent': contact_name is not None and sms_result is not None,
         'alert_triggered': True,
+        'contact_name': contact_name,
+        'message_sent': message_sent,
         'log_id': log.id,
         'sms_result': sms_result,
         'sms_error': sms_error

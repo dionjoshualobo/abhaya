@@ -15,8 +15,10 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { Accelerometer } from 'expo-sensors';
 import { sendAlert, reportAnomaly } from '../frontend/services/api';
+import { startBackgroundMotionDetection, stopBackgroundMotionDetection } from './backgroundMotion';
 
-const SHAKE_THRESHOLD = 25.0;
+const SHAKE_THRESHOLD = 8.0;
+const MOTION_LOG_INTERVAL_MS = 1000;
 
 export default function DashboardScreen() {
   const { username, phone } = useLocalSearchParams<{ username: string; phone: string }>();
@@ -24,13 +26,30 @@ export default function DashboardScreen() {
 
   const [active, setActive] = useState(false);
   const shakeRef = useRef(false); // prevent duplicate triggers
+  const lastMotionLogAt = useRef(0);
 
   // Shake detection
   useEffect(() => {
+    console.log(`[motion] shake detection armed (threshold=${SHAKE_THRESHOLD})`);
+    // Start background motion detection (works even when app is backgrounded)
+    const bgSub = startBackgroundMotionDetection();
+    
     Accelerometer.setUpdateInterval(200);
     const sub = Accelerometer.addListener(async ({ x, y, z }) => {
       const magnitude = Math.sqrt(x * x + y * y + z * z);
+      const now = Date.now();
+
+      if (now - lastMotionLogAt.current >= MOTION_LOG_INTERVAL_MS) {
+        lastMotionLogAt.current = now;
+        console.log(
+          `[motion] x=${x.toFixed(2)} y=${y.toFixed(2)} z=${z.toFixed(2)} magnitude=${magnitude.toFixed(2)} threshold=${SHAKE_THRESHOLD}`,
+        );
+      }
+
       if (magnitude >= SHAKE_THRESHOLD && !shakeRef.current) {
+        console.log(
+          `[motion] shake detected x=${x.toFixed(2)} y=${y.toFixed(2)} z=${z.toFixed(2)} magnitude=${magnitude.toFixed(2)}`,
+        );
         shakeRef.current = true;
         setTimeout(() => { shakeRef.current = false; }, 5000); // 5s local cooldown
 
@@ -43,14 +62,25 @@ export default function DashboardScreen() {
             lat = loc.coords.latitude;
             lng = loc.coords.longitude;
           }
+          console.log(`[motion] reporting anomaly lat=${lat} lng=${lng}`);
           const res = await reportAnomaly(x, y, z, lat, lng);
+          console.log(`[motion] anomaly response:`, res.data);
           if (res.data.alert_sent) {
-            Alert.alert('🚨 Shake Detected', 'Sudden movement detected — SOS sent to your emergency contacts.');
+            const contactName = res.data.contact_name || 'contacts';
+            Alert.alert('🚨 SOS Sent', `Alert sent to ${contactName}`);
+          } else {
+            console.log(`[motion] alert not sent - check cooldown or contacts`);
           }
-        } catch { /* silent — backend cooldown handles duplicates */ }
+        } catch (error: any) {
+          console.log(`[motion] anomaly report failed: ${error?.message ?? error}`);
+        }
       }
     });
-    return () => sub.remove();
+    return () => {
+      console.log('[motion] shake detection disarmed');
+      sub.remove();
+      stopBackgroundMotionDetection();
+    };
   }, []);
 
   const pulse1   = useRef(new Animated.Value(1)).current;
