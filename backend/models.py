@@ -88,3 +88,33 @@ class AnomalyLog(db.Model):
             'alert_triggered': self.alert_triggered,
             'created_at': self.created_at.isoformat(),
         }
+
+
+class LiveLocationSession(db.Model):
+    """A live location sharing session for SOS tracking."""
+    __tablename__ = 'live_location_sessions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    token = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    person_name = db.Column(db.String(100), nullable=True)
+    latest_latitude = db.Column(db.Float, nullable=False)
+    latest_longitude = db.Column(db.Float, nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'token': self.token,
+            'person_name': self.person_name,
+            'latest_latitude': self.latest_latitude,
+            'latest_longitude': self.latest_longitude,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }

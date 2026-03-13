@@ -2,11 +2,13 @@ package com.anonymous.abhaya
 
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
+import com.facebook.react.modules.core.DeviceEventManagerModule
 
 import expo.modules.ReactActivityDelegateWrapper
 
@@ -57,5 +59,20 @@ class MainActivity : ReactActivity() {
       // Use the default back button implementation on Android S
       // because it's doing more than [Activity.moveTaskToBack] in fact.
       super.invokeDefaultOnBackPressed()
+  }
+
+  override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+    if (
+      event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN &&
+      event.action == KeyEvent.ACTION_DOWN &&
+      event.repeatCount == 0
+    ) {
+      val reactContext = reactNativeHost.reactInstanceManager.currentReactContext
+      reactContext
+        ?.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+        ?.emit("AbhayaVolumeDownPressed", null)
+    }
+
+    return super.dispatchKeyEvent(event)
   }
 }

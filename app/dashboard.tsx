@@ -12,14 +12,19 @@ import {
   PermissionsAndroid,
   Platform,
   NativeModules,
+  DeviceEventEmitter,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { Accelerometer } from 'expo-sensors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Voice from '@react-native-voice/voice';
-import { sendAlert, reportAnomaly } from '../frontend/services/api';
+import {
+  sendAlert,
+  reportAnomaly,
+  stopLiveTracking as stopLiveTrackingSession,
+  updateLiveTracking,
+} from '../frontend/services/api';
 import { startBackgroundMotionDetection, stopBackgroundMotionDetection } from './backgroundMotion';
 import {
   DEFAULT_VOICE_CODE_WORDS,
@@ -32,6 +37,8 @@ const SHAKE_THRESHOLD = 5.0;  // MUST match backend ANOMALY_THRESHOLD and backgr
 const MOTION_LOG_INTERVAL_MS = 1000;
 const VOICE_LISTEN_DURATION_MS = 10000;
 const VOICE_COOLDOWN_MS = 12000;
+const LIVE_TRACKING_UPDATE_MS = 15000;
+const LIVE_TRACKING_AUTO_STOP_MS = 10 * 60 * 1000;
 
 type RemovableSubscription = {
   remove: () => void;
@@ -40,6 +47,12 @@ type RemovableSubscription = {
 type VoiceDebugEvent = {
   at: string;
   message: string;
+};
+
+type NativeVoiceModule = {
+  startSpeech: (locale: string, options: Record<string, unknown>, callback: (error: string | false) => void) => void;
+  stopSpeech: (callback: (error: string | false) => void) => void;
+  destroySpeech: (callback: (error: string | false) => void) => void;
 };
 
 export default function DashboardScreen() {
@@ -54,6 +67,9 @@ export default function DashboardScreen() {
   const voiceMatchedRef = useRef(false);
   const voiceCooldownUntilRef = useRef(0);
   const voiceStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const liveTrackingTokenRef = useRef<string | null>(null);
+  const liveTrackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const liveTrackingStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [voiceDebugListening, setVoiceDebugListening] = useState(false);
   const [voiceDebugEnabled, setVoiceDebugEnabled] = useState(false);
   const [voiceDebugConfiguredWords, setVoiceDebugConfiguredWords] = useState<string[]>(DEFAULT_VOICE_CODE_WORDS);
@@ -62,6 +78,7 @@ export default function DashboardScreen() {
   const [voiceDebugMatchedWord, setVoiceDebugMatchedWord] = useState<string | null>(null);
   const [voiceDebugEvents, setVoiceDebugEvents] = useState<VoiceDebugEvent[]>([]);
   const [voiceNativeReady, setVoiceNativeReady] = useState(false);
+  const voiceEventSubscriptionsRef = useRef<RemovableSubscription[]>([]);
 
   const appendVoiceDebugEvent = useCallback((message: string) => {
     const now = new Date();
@@ -69,9 +86,137 @@ export default function DashboardScreen() {
     setVoiceDebugEvents((prev) => [{ at, message }, ...prev].slice(0, 8));
   }, []);
 
-  const isVoiceNativeAvailable = useCallback(() => {
-    return Boolean((NativeModules as { Voice?: unknown }).Voice);
+  const clearLiveTrackingTimers = useCallback(() => {
+    if (liveTrackingIntervalRef.current) {
+      clearInterval(liveTrackingIntervalRef.current);
+      liveTrackingIntervalRef.current = null;
+    }
+
+    if (liveTrackingStopTimerRef.current) {
+      clearTimeout(liveTrackingStopTimerRef.current);
+      liveTrackingStopTimerRef.current = null;
+    }
   }, []);
+
+  const pushLiveTrackingUpdate = useCallback(async (token: string) => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        return;
+      }
+
+      const loc = await Location.getCurrentPositionAsync({});
+      await updateLiveTracking(token, loc.coords.latitude, loc.coords.longitude);
+    } catch {
+      // ignore tracking update failures
+    }
+  }, []);
+
+  const stopLiveTrackingFlow = useCallback(async () => {
+    const token = liveTrackingTokenRef.current;
+    clearLiveTrackingTimers();
+
+    if (!token) {
+      return;
+    }
+
+    liveTrackingTokenRef.current = null;
+    try {
+      await stopLiveTrackingSession(token);
+    } catch {
+      // ignore stop errors
+    }
+  }, [clearLiveTrackingTimers]);
+
+  const startLiveTrackingFlow = useCallback(async (token?: string) => {
+    if (!token) {
+      return;
+    }
+
+    liveTrackingTokenRef.current = token;
+    clearLiveTrackingTimers();
+
+    await pushLiveTrackingUpdate(token);
+
+    liveTrackingIntervalRef.current = setInterval(() => {
+      void pushLiveTrackingUpdate(token);
+    }, LIVE_TRACKING_UPDATE_MS);
+
+    liveTrackingStopTimerRef.current = setTimeout(() => {
+      void stopLiveTrackingFlow();
+    }, LIVE_TRACKING_AUTO_STOP_MS);
+  }, [clearLiveTrackingTimers, pushLiveTrackingUpdate, stopLiveTrackingFlow]);
+
+  const getVoiceNativeModule = useCallback((): NativeVoiceModule | null => {
+    const modules = NativeModules as {
+      Voice?: NativeVoiceModule;
+      RCTVoice?: NativeVoiceModule;
+    };
+
+    return modules.Voice ?? modules.RCTVoice ?? null;
+  }, []);
+
+  const isVoiceNativeAvailable = useCallback(() => {
+    return getVoiceNativeModule() !== null;
+  }, [getVoiceNativeModule]);
+
+  const startNativeVoice = useCallback(async (locale: string) => {
+    const nativeVoice = getVoiceNativeModule();
+    if (!nativeVoice) {
+      throw new Error('Voice native module is unavailable');
+    }
+
+    const options = {
+      EXTRA_LANGUAGE_MODEL: 'LANGUAGE_MODEL_FREE_FORM',
+      EXTRA_MAX_RESULTS: 5,
+      EXTRA_PARTIAL_RESULTS: true,
+      REQUEST_PERMISSIONS_AUTO: true,
+    };
+
+    await new Promise<void>((resolve, reject) => {
+      nativeVoice.startSpeech(locale, options, (error) => {
+        if (error) {
+          reject(new Error(String(error)));
+          return;
+        }
+        resolve();
+      });
+    });
+  }, [getVoiceNativeModule]);
+
+  const stopNativeVoice = useCallback(async () => {
+    const nativeVoice = getVoiceNativeModule();
+    if (!nativeVoice) {
+      return;
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      nativeVoice.stopSpeech((error) => {
+        if (error) {
+          reject(new Error(String(error)));
+          return;
+        }
+        resolve();
+      });
+    });
+  }, [getVoiceNativeModule]);
+
+  const destroyNativeVoice = useCallback(async () => {
+    const nativeVoice = getVoiceNativeModule();
+    if (!nativeVoice) {
+      return;
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      nativeVoice.destroySpeech((error) => {
+        if (error) {
+          reject(new Error(String(error)));
+          return;
+        }
+        resolve();
+      });
+    });
+  }, [getVoiceNativeModule]);
 
   const sendVoiceAlert = useCallback(async () => {
     let latitude = 0;
@@ -84,9 +229,20 @@ export default function DashboardScreen() {
       longitude = loc.coords.longitude;
     }
 
-    await sendAlert(latitude, longitude);
+    const response = await sendAlert(latitude, longitude, username ?? undefined);
+    const trackingToken = response.data?.tracking_token as string | undefined;
+    void startLiveTrackingFlow(trackingToken);
     Alert.alert('Voice SOS Sent', 'Code word matched. Alert sent to your emergency contacts.');
-  }, []);
+  }, [startLiveTrackingFlow, username]);
+
+  useEffect(() => {
+    if (!username) {
+      return;
+    }
+    void AsyncStorage.setItem('current_person_name', username).catch(() => {
+      // ignore persistence errors
+    });
+  }, [username]);
 
   const stopVoiceListening = useCallback(async () => {
     if (voiceStopTimerRef.current) {
@@ -101,13 +257,13 @@ export default function DashboardScreen() {
     voiceListeningRef.current = false;
     setVoiceDebugListening(false);
     try {
-      await Voice.stop();
+      await stopNativeVoice();
     } catch {
       // ignore if already stopped
     }
     console.log('[voice-sos] listening window closed');
     appendVoiceDebugEvent('Listening window closed');
-  }, [appendVoiceDebugEvent]);
+  }, [appendVoiceDebugEvent, stopNativeVoice]);
 
   const startVoiceListeningWindow = useCallback(async () => {
     if (voiceListeningRef.current) {
@@ -161,7 +317,7 @@ export default function DashboardScreen() {
     Alert.alert('Voice SOS Active', 'Listening for code word for 10 seconds.');
 
     try {
-      await Voice.start('en-US');
+      await startNativeVoice('en-US');
     } catch (error: any) {
       voiceListeningRef.current = false;
       setVoiceDebugListening(false);
@@ -173,7 +329,7 @@ export default function DashboardScreen() {
     voiceStopTimerRef.current = setTimeout(() => {
       void stopVoiceListening();
     }, VOICE_LISTEN_DURATION_MS);
-  }, [appendVoiceDebugEvent, isVoiceNativeAvailable, stopVoiceListening]);
+  }, [appendVoiceDebugEvent, isVoiceNativeAvailable, startNativeVoice, stopVoiceListening]);
 
   const processVoiceResults = useCallback(async (results: string[]) => {
     if (!voiceListeningRef.current || voiceMatchedRef.current) {
@@ -224,6 +380,26 @@ export default function DashboardScreen() {
     }
   }, [appendVoiceDebugEvent, sendVoiceAlert, stopVoiceListening]);
 
+  const resetVoiceEventListeners = useCallback(() => {
+    voiceEventSubscriptionsRef.current.forEach((subscription) => subscription.remove());
+    voiceEventSubscriptionsRef.current = [];
+
+    const resultsSubscription = DeviceEventEmitter.addListener('onSpeechResults', (event: { value?: string[] }) => {
+      const values = event?.value ?? [];
+      console.log('[voice-sos] heard:', values);
+      appendVoiceDebugEvent(`Speech result: ${values.join(' | ') || '(empty)'}`);
+      void processVoiceResults(values);
+    });
+
+    const errorSubscription = DeviceEventEmitter.addListener('onSpeechError', (event: { error?: { message?: string } }) => {
+      const message = event?.error?.message ?? 'unknown';
+      console.log('[voice-sos] speech error:', message);
+      appendVoiceDebugEvent(`Speech error: ${message}`);
+    });
+
+    voiceEventSubscriptionsRef.current = [resultsSubscription, errorSubscription];
+  }, [appendVoiceDebugEvent, processVoiceResults]);
+
   useEffect(() => {
     const codeWordsDefault = DEFAULT_VOICE_CODE_WORDS.join(', ');
     const nativeAvailable = isVoiceNativeAvailable();
@@ -250,17 +426,14 @@ export default function DashboardScreen() {
       // ignore read errors
     });
 
-    Voice.onSpeechResults = (event) => {
-      const values = event.value ?? [];
-      console.log('[voice-sos] heard:', values);
-      appendVoiceDebugEvent(`Speech result: ${values.join(' | ') || '(empty)'}`);
-      void processVoiceResults(values);
-    };
+    if (nativeAvailable) {
+      resetVoiceEventListeners();
+    }
 
-    Voice.onSpeechError = (event) => {
-      console.log('[voice-sos] speech error:', event.error?.message);
-      appendVoiceDebugEvent(`Speech error: ${event.error?.message ?? 'unknown'}`);
-    };
+    const hardwareVolumeSubscription = DeviceEventEmitter.addListener('AbhayaVolumeDownPressed', () => {
+      appendVoiceDebugEvent('Hardware volume-down key pressed');
+      void startVoiceListeningWindow();
+    });
 
     let volumeSubscription: RemovableSubscription = { remove: () => {} };
     let effectDisposed = false;
@@ -308,17 +481,18 @@ export default function DashboardScreen() {
 
     return () => {
       effectDisposed = true;
+      hardwareVolumeSubscription.remove();
       volumeSubscription.remove();
-      if (isVoiceNativeAvailable()) {
-        Voice.destroy().then(Voice.removeAllListeners).catch(() => {
-          // ignore cleanup errors
-        });
-      }
+      voiceEventSubscriptionsRef.current.forEach((subscription) => subscription.remove());
+      voiceEventSubscriptionsRef.current = [];
+      void destroyNativeVoice().catch(() => {
+        // ignore cleanup errors
+      });
       if (voiceStopTimerRef.current) {
         clearTimeout(voiceStopTimerRef.current);
       }
     };
-  }, [appendVoiceDebugEvent, isVoiceNativeAvailable, processVoiceResults, startVoiceListeningWindow]);
+  }, [appendVoiceDebugEvent, destroyNativeVoice, isVoiceNativeAvailable, processVoiceResults, resetVoiceEventListeners, startVoiceListeningWindow]);
 
   // Shake detection
   useEffect(() => {
@@ -355,7 +529,7 @@ export default function DashboardScreen() {
             lng = loc.coords.longitude;
           }
           console.log(`[motion] reporting anomaly lat=${lat} lng=${lng}`);
-          const res = await reportAnomaly(x, y, z, lat, lng);
+          const res = await reportAnomaly(x, y, z, lat, lng, username ?? undefined);
           console.log(`[motion] anomaly response:`, res.data);
           if (res.data.alert_sent) {
             const contactName = res.data.contact_name || 'contacts';
@@ -377,7 +551,7 @@ export default function DashboardScreen() {
       sub.remove();
       stopBackgroundMotionDetection();
     };
-  }, []);
+  }, [username]);
 
   const pulse1   = useRef(new Animated.Value(1)).current;
   const pulse2   = useRef(new Animated.Value(1)).current;
@@ -416,7 +590,9 @@ export default function DashboardScreen() {
         latitude = loc.coords.latitude;
         longitude = loc.coords.longitude;
       }
-      await sendAlert(latitude, longitude);
+      const response = await sendAlert(latitude, longitude, username ?? undefined);
+      const trackingToken = response.data?.tracking_token as string | undefined;
+      void startLiveTrackingFlow(trackingToken);
       Alert.alert('🚨 Alert Sent', 'SOS sent to your emergency contacts.');
     } catch (e: any) {
       Alert.alert('Failed', `Could not reach server: ${e?.message ?? e}`);
@@ -431,6 +607,7 @@ export default function DashboardScreen() {
         { text: 'Keep Active', style: 'cancel' },
         { text: 'Stop', style: 'destructive', onPress: () => {
           setActive(false);
+          void stopLiveTrackingFlow();
           pulseAnim.current?.stop();
           pulse1.setValue(1);
           pulse2.setValue(1);
@@ -438,6 +615,12 @@ export default function DashboardScreen() {
       ]
     );
   }
+
+  useEffect(() => {
+    return () => {
+      void stopLiveTrackingFlow();
+    };
+  }, [stopLiveTrackingFlow]);
   function toggleAlarm() {
     if (active) {
       stopAlarm();

@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from services.sms_service import send_sms
 from services.gemini_service import generate_sos_message
+from services.live_tracking_service import create_live_tracking_session, build_tracking_url
 from models import EmergencyContact
 
 alert_bp = Blueprint('alert', __name__)
@@ -22,6 +23,7 @@ def send_alert():
 
     latitude = data.get('latitude')
     longitude = data.get('longitude')
+    person_name = data.get('person_name')
 
     if latitude is None or longitude is None:
         return jsonify({'error': 'latitude and longitude are required'}), 400
@@ -41,9 +43,12 @@ def send_alert():
     if not phone_numbers:
         return jsonify({'error': 'No valid phone numbers found in contacts'}), 400
 
-    # Generate SOS message using Gemini
-    first_contact_name = contacts[0].get('name', 'Emergency Contact')
-    message = generate_sos_message(latitude, longitude, first_contact_name)
+    # Create live tracking session and include its URL in the SOS message
+    tracking_session = create_live_tracking_session(person_name, latitude, longitude)
+    tracking_url = build_tracking_url(tracking_session.token, request.url_root)
+
+    # Generate SOS message using provided person name + location
+    message = generate_sos_message(latitude, longitude, person_name, tracking_url)
 
     # Send SMS via Twilio
     try:
@@ -59,5 +64,7 @@ def send_alert():
         'status': 'alert_sent',
         'message_sent': message,
         'recipients': len(phone_numbers),
+        'tracking_token': tracking_session.token,
+        'tracking_url': tracking_url,
         'twilio_response': result
     }), 200

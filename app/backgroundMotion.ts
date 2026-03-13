@@ -7,6 +7,7 @@
 import { AppState, AppStateStatus } from 'react-native';
 import { Accelerometer } from 'expo-sensors';
 import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { reportAnomaly } from '../frontend/services/api';
 
 const SHAKE_THRESHOLD = 5.0;  // MUST match backend ANOMALY_THRESHOLD and dashboard.tsx
@@ -54,7 +55,9 @@ export function startBackgroundMotionDetection() {
           lng = loc.coords.longitude;
         }
 
-        const res = await reportAnomaly(x, y, z, lat, lng);
+        const personName = await AsyncStorage.getItem('current_person_name');
+
+        const res = await reportAnomaly(x, y, z, lat, lng, personName ?? undefined);
 
         if (res.data.alert_sent) {
           console.log(`[bg-motion] SOS sent to ${res.data.contact_name}`);

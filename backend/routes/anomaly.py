@@ -3,6 +3,7 @@ from extensions import db
 from models import AnomalyLog, EmergencyContact
 from services.sms_service import send_sms
 from services.gemini_service import generate_sos_message
+from services.live_tracking_service import create_live_tracking_session, build_tracking_url
 from math import sqrt
 from datetime import datetime, timezone
 
@@ -80,6 +81,9 @@ def detect_anomaly():
     # Auto-send SOS to all saved contacts
     latitude = data.get('latitude', 0.0)
     longitude = data.get('longitude', 0.0)
+    person_name = data.get('person_name')
+    tracking_session = create_live_tracking_session(person_name, latitude, longitude)
+    tracking_url = build_tracking_url(tracking_session.token, request.url_root)
 
     contacts = EmergencyContact.query.all()
     sms_result = None
@@ -94,7 +98,7 @@ def detect_anomaly():
         phone_numbers = [c.phone for c in contacts]
         print(f'[anomaly] sending SMS to {len(phone_numbers)} numbers')
         try:
-            message_sent = generate_sos_message(latitude, longitude, contact_name)
+            message_sent = generate_sos_message(latitude, longitude, person_name, tracking_url)
             print(f'[anomaly] generated message: {message_sent}')
             sms_result = send_sms(phone_numbers, message_sent)
             print(f'[anomaly] SMS sent successfully: {sms_result}')
@@ -117,6 +121,8 @@ def detect_anomaly():
         'alert_triggered': True,
         'contact_name': contact_name,
         'message_sent': message_sent,
+        'tracking_token': tracking_session.token,
+        'tracking_url': tracking_url,
         'log_id': log.id,
         'sms_result': sms_result,
         'sms_error': sms_error

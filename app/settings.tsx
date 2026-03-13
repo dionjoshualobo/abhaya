@@ -19,11 +19,6 @@ import {
 } from './voiceSosSettings';
 
 const KEYS = {
-  vibration:     'setting_vibration',
-  locationShare: 'setting_locationShare',
-  notifications: 'setting_notifications',
-  autoAlert:     'setting_autoAlert',
-  stealthMode:   'setting_stealthMode',
   voiceSOS:      VOICE_SOS_STORAGE_KEYS.enabled,
 } as const;
 
@@ -60,11 +55,6 @@ function SettingRow({ icon, label, description, value, onToggle }: SettingRowPro
 }
 
 const DEFAULTS: Record<SettingKey, boolean> = {
-  vibration:     true,
-  locationShare: false,
-  notifications: true,
-  autoAlert:     false,
-  stealthMode:   false,
   voiceSOS:      false,
 };
 
@@ -132,30 +122,6 @@ export default function SettingsScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* SOS Section */}
-        <Text style={styles.section}>SOS Behaviour</Text>
-        <SettingRow
-          icon="phone-portrait-outline"
-          label="Vibration Alert"
-          description="Vibrate phone when SOS is triggered"
-          value={settings.vibration}
-          onToggle={v => toggle('vibration', v)}
-        />
-        <SettingRow
-          icon="timer-outline"
-          label="Auto-Alert Contacts"
-          description="Notify emergency contacts automatically"
-          value={settings.autoAlert}
-          onToggle={v => toggle('autoAlert', v)}
-        />
-        <SettingRow
-          icon="eye-off-outline"
-          label="Stealth Mode"
-          description="Trigger SOS without visible alarm"
-          value={settings.stealthMode}
-          onToggle={v => toggle('stealthMode', v)}
-        />
-
         <Text style={styles.section}>Voice SOS</Text>
         <SettingRow
           icon="mic-outline"
@@ -179,23 +145,6 @@ export default function SettingsScreen() {
             autoCorrect={false}
           />
         </View>
-
-        {/* Privacy Section */}
-        <Text style={styles.section}>Privacy</Text>
-        <SettingRow
-          icon="location-outline"
-          label="Share Location"
-          description="Share live location during SOS"
-          value={settings.locationShare}
-          onToggle={v => toggle('locationShare', v)}
-        />
-        <SettingRow
-          icon="notifications-outline"
-          label="Notifications"
-          description="Allow push notifications"
-          value={settings.notifications}
-          onToggle={v => toggle('notifications', v)}
-        />
 
         <Text style={styles.footer}>Abhaya v1.0.0 — Your safety companion</Text>
       </ScrollView>

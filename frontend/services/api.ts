@@ -14,8 +14,14 @@ const api = axios.create({
 export const checkHealth = () => api.get('/health');
 
 // ----- Alerts -----
-export const sendAlert = (latitude: number, longitude: number) =>
-  api.post('/alert', { latitude, longitude });
+export const sendAlert = (latitude: number, longitude: number, personName?: string) =>
+  api.post('/alert', { latitude, longitude, person_name: personName });
+
+export const updateLiveTracking = (token: string, latitude: number, longitude: number) =>
+  api.post('/tracking/update', { token, latitude, longitude });
+
+export const stopLiveTracking = (token: string) =>
+  api.post('/tracking/stop', { token });
 
 // ----- Contacts -----
 export const getContacts = () => api.get('/contacts');
@@ -40,8 +46,14 @@ export const reportDangerZone = (latitude: number, longitude: number, descriptio
   api.post('/heatmap', { latitude, longitude, description, weight });
 
 // ----- Anomaly -----
-export const reportAnomaly = (x: number, y: number, z: number, latitude?: number, longitude?: number) =>
-  api.post('/anomaly', { x, y, z, latitude, longitude });
+export const reportAnomaly = (
+  x: number,
+  y: number,
+  z: number,
+  latitude?: number,
+  longitude?: number,
+  personName?: string,
+) => api.post('/anomaly', { x, y, z, latitude, longitude, person_name: personName });
 
 // ----- Check-in -----
 export const requestCheckin = (latitude: number, longitude: number, timeout_seconds?: number) =>
