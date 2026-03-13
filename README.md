@@ -1,7 +1,8 @@
-# 🛡️ Abhaya — Women’s Safety App
+# Abhaya — Women's Safety App
 
 [![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactnative.dev/)
 [![Expo](https://img.shields.io/badge/Expo-000020?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/)
+[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org/)
 [![Flask](https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 
@@ -9,31 +10,31 @@
 
 ---
 
-## 📑 Table of Contents
-- [✨ Core Capabilities](#-core-capabilities)
-- [🏗️ High-Level Architecture](#️-high-level-architecture)
-- [📁 Repository Layout](#-repository-layout)
-- [🛠️ Tech Stack](#-tech-stack)
-- [🚀 Getting Started](#-getting-started)
-- [🔌 Key API Routes](#-key-api-routes)
-- [🚨 Important Workflows](#-important-workflows)
-- [🔒 Security Notes](#-security-notes)
+## Table of Contents
+- [Core Capabilities](#core-capabilities)
+- [High-Level Architecture](#high-level-architecture)
+- [Repository Layout](#repository-layout)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+- [Key API Routes](#key-api-routes)
+- [Important Workflows](#important-workflows)
+- [Security Notes](#security-notes)
 
 ---
 
-## ✨ Core Capabilities
+## Core Capabilities
 
-- **🆘 Manual SOS:** One-tap emergency alert to your saved contacts.
-- **🎙️ Voice SOS:** Press the volume-down button, speak a configured code word, and automatically trigger an alert.
-- **📳 Shake/Anomaly SOS:** Detects high accelerometer activity (like shaking) and auto-triggers an SOS (with a cooldown to prevent false alarms).
-- **📍 Live Tracking Links:** SMS alerts include a live tracking URL that updates periodically with your precise location.
-- **🚗 Transport Safety Alert:** Share vehicle details (plate, driver, route) and personal notes with your trusted contacts.
-- **👥 Contact & Place Management:** Easily manage emergency contacts and designate "safe places".
-- **🗺️ Heatmap & Check-in:** View danger reports on a map and utilize check-in escalation workflows if you fail to check-in on time.
+- **Manual SOS:** One-tap emergency alert to your saved contacts.
+- **Voice SOS:** Press the volume-down button, speak a configured code word, and automatically trigger an alert.
+- **Shake/Anomaly SOS:** Detects high accelerometer activity (like shaking) and auto-triggers an SOS (with a cooldown to prevent false alarms).
+- **Live Tracking Links:** SMS alerts include a live tracking URL that updates periodically with your precise location.
+- **Transport Safety Alert:** Share vehicle details (plate, driver, route) and personal notes with your trusted contacts.
+- **Contact & Place Management:** Easily manage emergency contacts and designate "safe places".
+- **Heatmap & Check-in:** View danger reports on a map and utilize check-in escalation workflows if you fail to check-in on time.
 
 ---
 
-## 🏗️ High-Level Architecture
+## High-Level Architecture
 
 ### Frontend (React Native / Expo)
 - **Routing:** Screen routing is handled via Expo Router (`app/`).
@@ -52,7 +53,7 @@
 
 ---
 
-## 📁 Repository Layout
+## Repository Layout
 
 ```text
 abhaya/
@@ -70,7 +71,7 @@ abhaya/
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Frontend:** React Native, Expo, Expo Router, TypeScript
 - **Backend:** Python, Flask, SQLAlchemy
@@ -80,7 +81,7 @@ abhaya/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -103,7 +104,7 @@ FIREBASE_CREDENTIALS_PATH=./firebase-credentials.json
 FIREBASE_DATABASE_URL=your_firebase_url
 BACKEND_PUBLIC_BASE_URL=your_public_backend_url
 ```
-> **⚠️ Important:** `BACKEND_PUBLIC_BASE_URL` should be a publicly reachable URL (e.g., using ngrok) for live tracking links in SMS. **Never commit real secrets to version control.**
+> **Important:** `BACKEND_PUBLIC_BASE_URL` should be a publicly reachable URL (e.g., using ngrok) for live tracking links in SMS. **Never commit real secrets to version control.**
 
 ### 2. Local Development
 
@@ -134,7 +135,7 @@ adb shell monkey -p com.anonymous.abhaya -c android.intent.category.LAUNCHER 1
 
 ---
 
-## 🔌 Key API Routes
+## Key API Routes
 
 #### Core System
 - `GET /health` - Health check
@@ -163,16 +164,16 @@ adb shell monkey -p com.anonymous.abhaya -c android.intent.category.LAUNCHER 1
 
 ---
 
-## 🚨 Important Workflows
+## Important Workflows
 
-### 🚗 Transport Alert Flow
+### Transport Alert Flow
 When a user submits transport details (e.g., in a cab or bus):
 1. App captures current location.
 2. Backend creates a secure live tracking session.
 3. SMS is dispatched to emergency contacts containing the transport fields, location, map link, and live tracking URL.
 4. App continuously pushes periodic location updates to the active tracking session.
 
-### 🎙️ Voice SOS Flow
+### Voice SOS Flow
 For discreet emergency activation:
 1. User presses the **volume-down** physical key.
 2. App opens a brief, hidden voice listening window.
@@ -181,7 +182,7 @@ For discreet emergency activation:
 
 ---
 
-## 🔒 Security Notes
+## Security Notes
 
 - **Secret Management:** Rotate exposed credentials immediately if they are ever committed or shared. Use environment-based secret management for production.
 - **Network Security:** Always use `HTTPS` for public or live-tracking URLs to protect location data in transit.
