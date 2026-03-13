@@ -1,6 +1,7 @@
 export const VOICE_SOS_STORAGE_KEYS = {
   enabled: 'setting_voiceSosEnabled',
   codeWords: 'setting_voiceCodeWords',
+  debugSnapshot: 'setting_voiceDebugSnapshot',
 } as const;
 
 export const DEFAULT_VOICE_CODE_WORDS = ['help me', 'abhaya'];

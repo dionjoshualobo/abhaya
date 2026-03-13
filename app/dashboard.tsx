@@ -86,6 +86,33 @@ export default function DashboardScreen() {
     setVoiceDebugEvents((prev) => [{ at, message }, ...prev].slice(0, 8));
   }, []);
 
+  useEffect(() => {
+    const snapshot = {
+      enabled: voiceDebugEnabled,
+      nativeReady: voiceNativeReady,
+      listening: voiceDebugListening,
+      configuredWords: voiceDebugConfiguredWords,
+      heard: voiceDebugHeard,
+      normalized: voiceDebugNormalizedHeard,
+      matchedWord: voiceDebugMatchedWord,
+      events: voiceDebugEvents,
+      updatedAt: new Date().toISOString(),
+    };
+
+    void AsyncStorage.setItem(VOICE_SOS_STORAGE_KEYS.debugSnapshot, JSON.stringify(snapshot)).catch(() => {
+      // ignore debug persistence errors
+    });
+  }, [
+    voiceDebugEnabled,
+    voiceNativeReady,
+    voiceDebugListening,
+    voiceDebugConfiguredWords,
+    voiceDebugHeard,
+    voiceDebugNormalizedHeard,
+    voiceDebugMatchedWord,
+    voiceDebugEvents,
+  ]);
+
   const clearLiveTrackingTimers = useCallback(() => {
     if (liveTrackingIntervalRef.current) {
       clearInterval(liveTrackingIntervalRef.current);
@@ -653,27 +680,6 @@ export default function DashboardScreen() {
         Hello, <Text style={styles.name}>{username ?? 'User'}</Text>
       </Text>
 
-      <View style={styles.voiceDebugCard}>
-        <Text style={styles.voiceDebugTitle}>Voice SOS Debug</Text>
-        <Text style={styles.voiceDebugLine}>Enabled: {voiceDebugEnabled ? 'ON' : 'OFF'}</Text>
-        <Text style={styles.voiceDebugLine}>Native module: {voiceNativeReady ? 'READY' : 'MISSING'}</Text>
-        <Text style={styles.voiceDebugLine}>Listening: {voiceDebugListening ? 'YES (10s window)' : 'NO'}</Text>
-        <Text style={styles.voiceDebugLine}>Configured words: {voiceDebugConfiguredWords.join(', ') || '(none)'}</Text>
-        <Text style={styles.voiceDebugLine}>Heard: {voiceDebugHeard.join(' | ') || '(no speech yet)'}</Text>
-        <Text style={styles.voiceDebugLine}>Normalized: {voiceDebugNormalizedHeard.join(' | ') || '(none)'}</Text>
-        <Text style={styles.voiceDebugLine}>Matched word: {voiceDebugMatchedWord ?? '(no match yet)'}</Text>
-        <Text style={styles.voiceDebugEventsTitle}>Recent events</Text>
-        {voiceDebugEvents.length === 0 ? (
-          <Text style={styles.voiceDebugEvent}>(no events yet)</Text>
-        ) : (
-          voiceDebugEvents.map((event, index) => (
-            <Text key={`${event.at}-${index}`} style={styles.voiceDebugEvent}>
-              {event.at} • {event.message}
-            </Text>
-          ))
-        )}
-      </View>
-
       {/* SOS Button */}
       <View style={styles.sosArea}>
         {active && (
@@ -752,38 +758,6 @@ const styles = StyleSheet.create({
   iconBtn:     { padding: 6 },
   greeting:    { fontSize: 16, color: '#888', paddingHorizontal: 24, marginBottom: 8 },
   name:        { color: '#fff', fontWeight: '600' },
-  voiceDebugCard: {
-    marginHorizontal: 16,
-    marginBottom: 8,
-    padding: 12,
-    borderRadius: 10,
-    backgroundColor: '#1a1a1a',
-    borderWidth: 1,
-    borderColor: '#2f2f2f',
-  },
-  voiceDebugTitle: {
-    color: '#f1f1f1',
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 6,
-  },
-  voiceDebugLine: {
-    color: '#cfcfcf',
-    fontSize: 12,
-    marginBottom: 3,
-  },
-  voiceDebugEventsTitle: {
-    color: '#f1f1f1',
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 6,
-    marginBottom: 4,
-  },
-  voiceDebugEvent: {
-    color: '#a7a7a7',
-    fontSize: 11,
-    marginBottom: 2,
-  },
   sosArea: {
     flex: 1,
     alignItems: 'center',

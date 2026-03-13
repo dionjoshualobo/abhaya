@@ -24,6 +24,23 @@ const KEYS = {
 
 type SettingKey = keyof typeof KEYS;
 
+type VoiceDebugEvent = {
+  at: string;
+  message: string;
+};
+
+type VoiceDebugSnapshot = {
+  enabled: boolean;
+  nativeReady: boolean;
+  listening: boolean;
+  configuredWords: string[];
+  heard: string[];
+  normalized: string[];
+  matchedWord: string | null;
+  events: VoiceDebugEvent[];
+  updatedAt: string;
+};
+
 type SettingRowProps = {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
@@ -63,7 +80,21 @@ export default function SettingsScreen() {
 
   const [settings, setSettings] = useState<Record<SettingKey, boolean>>(DEFAULTS);
   const [voiceCodeWords, setVoiceCodeWords] = useState(DEFAULT_VOICE_CODE_WORDS.join(', '));
+  const [voiceDebugSnapshot, setVoiceDebugSnapshot] = useState<VoiceDebugSnapshot | null>(null);
   const [loaded, setLoaded] = useState(false);
+
+  const loadVoiceDebugSnapshot = useCallback(async () => {
+    try {
+      const raw = await AsyncStorage.getItem(VOICE_SOS_STORAGE_KEYS.debugSnapshot);
+      if (!raw) {
+        setVoiceDebugSnapshot(null);
+        return;
+      }
+      setVoiceDebugSnapshot(JSON.parse(raw) as VoiceDebugSnapshot);
+    } catch {
+      setVoiceDebugSnapshot(null);
+    }
+  }, []);
 
   // Load all settings from AsyncStorage on mount
   useEffect(() => {
@@ -87,7 +118,15 @@ export default function SettingsScreen() {
         setLoaded(true);
       }
     })();
-  }, []);
+  }, [loadVoiceDebugSnapshot]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      void loadVoiceDebugSnapshot();
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [loadVoiceDebugSnapshot]);
 
   const toggle = useCallback(async (key: SettingKey, value: boolean) => {
     setSettings(prev => ({ ...prev, [key]: value }));
@@ -144,6 +183,33 @@ export default function SettingsScreen() {
             autoCapitalize="none"
             autoCorrect={false}
           />
+        </View>
+
+        <View style={styles.voiceBox}>
+          <Text style={styles.voiceLabel}>Voice Debug</Text>
+          {voiceDebugSnapshot ? (
+            <>
+              <Text style={styles.voiceDesc}>Updated: {new Date(voiceDebugSnapshot.updatedAt).toLocaleTimeString()}</Text>
+              <Text style={styles.debugLine}>Enabled: {voiceDebugSnapshot.enabled ? 'ON' : 'OFF'}</Text>
+              <Text style={styles.debugLine}>Native module: {voiceDebugSnapshot.nativeReady ? 'READY' : 'MISSING'}</Text>
+              <Text style={styles.debugLine}>Listening: {voiceDebugSnapshot.listening ? 'YES' : 'NO'}</Text>
+              <Text style={styles.debugLine}>Configured words: {voiceDebugSnapshot.configuredWords.join(', ') || '(none)'}</Text>
+              <Text style={styles.debugLine}>Heard: {voiceDebugSnapshot.heard.join(' | ') || '(none)'}</Text>
+              <Text style={styles.debugLine}>Matched word: {voiceDebugSnapshot.matchedWord ?? '(no match yet)'}</Text>
+              <Text style={styles.voiceDesc}>Recent events</Text>
+              {voiceDebugSnapshot.events.length === 0 ? (
+                <Text style={styles.debugEvent}>(no events yet)</Text>
+              ) : (
+                voiceDebugSnapshot.events.map((event, index) => (
+                  <Text key={`${event.at}-${index}`} style={styles.debugEvent}>
+                    {event.at} • {event.message}
+                  </Text>
+                ))
+              )}
+            </>
+          ) : (
+            <Text style={styles.voiceDesc}>No debug data yet. Trigger voice SOS once to populate this.</Text>
+          )}
         </View>
 
         <Text style={styles.footer}>Abhaya v1.0.0 — Your safety companion</Text>
@@ -215,6 +281,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 10,
     fontSize: 14,
+  },
+  debugLine: {
+    color: '#cfcfcf',
+    fontSize: 12,
+    marginBottom: 3,
+  },
+  debugEvent: {
+    color: '#a7a7a7',
+    fontSize: 11,
+    marginBottom: 2,
   },
   footer:   { textAlign: 'center', color: '#444', fontSize: 12, marginTop: 36 },
 });
