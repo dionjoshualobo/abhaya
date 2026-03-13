@@ -17,6 +17,7 @@ import {
   VOICE_SOS_STORAGE_KEYS,
   DEFAULT_VOICE_CODE_WORDS,
 } from './voiceSosSettings';
+import { colors, radius, spacing } from './theme';
 
 const KEYS = {
   voiceSOS:      VOICE_SOS_STORAGE_KEYS.enabled,
@@ -54,7 +55,7 @@ function SettingRow({ icon, label, description, value, onToggle }: SettingRowPro
     <View style={styles.row}>
       <View style={styles.rowLeft}>
         <View style={styles.iconWrap}>
-          <Ionicons name={icon} size={20} color="#c0392b" />
+          <Ionicons name={icon} size={20} color={colors.accentStrong} />
         </View>
         <View style={styles.rowText}>
           <Text style={styles.rowLabel}>{label}</Text>
@@ -64,8 +65,8 @@ function SettingRow({ icon, label, description, value, onToggle }: SettingRowPro
       <Switch
         value={value}
         onValueChange={onToggle}
-        trackColor={{ false: '#2a2a2a', true: '#c0392b' }}
-        thumbColor={value ? '#fff' : '#888'}
+        trackColor={{ false: colors.borderSubtle, true: colors.accentSoft }}
+        thumbColor={value ? colors.accent : '#888'}
       />
     </View>
   );
@@ -148,12 +149,12 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#111" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
 
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-          <Ionicons name="chevron-back" size={26} color="#fff" />
+          <Ionicons name="chevron-back" size={26} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Settings</Text>
         <View style={{ width: 38 }} />
@@ -219,78 +220,82 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: '#111' },
+  safe:   { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 10,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#1e1e1e',
+    borderBottomColor: colors.borderSubtle,
   },
   backBtn:     { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#fff' },
-  scroll:      { paddingHorizontal: 20, paddingBottom: 40 },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
+  scroll:      { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
   section: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#c0392b',
+    color: colors.accentStrong,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
-    marginTop: 28,
-    marginBottom: 8,
+    marginTop: spacing.xl,
+    marginBottom: spacing.sm,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1e1e1e',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
   },
   rowLeft:  { flexDirection: 'row', alignItems: 'center', flex: 1 },
   iconWrap: {
     width: 36,
     height: 36,
-    borderRadius: 10,
-    backgroundColor: '#2a0a0a',
+    borderRadius: radius.pill,
+    backgroundColor: colors.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: spacing.sm,
   },
   rowText:  { flex: 1 },
-  rowLabel: { fontSize: 15, fontWeight: '600', color: '#fff' },
-  rowDesc:  { fontSize: 12, color: '#666', marginTop: 2 },
+  rowLabel: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
+  rowDesc:  { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   voiceBox: {
-    backgroundColor: '#1e1e1e',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
-  },
-  voiceLabel: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  voiceDesc: { color: '#666', fontSize: 12, marginTop: 4, marginBottom: 10 },
-  voiceInput: {
-    color: '#fff',
-    backgroundColor: '#111',
-    borderRadius: 8,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: '#2a2a2a',
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    borderColor: colors.borderSubtle,
+  },
+  voiceLabel: { color: colors.textPrimary, fontSize: 15, fontWeight: '600' },
+  voiceDesc: { color: colors.textMuted, fontSize: 12, marginTop: 4, marginBottom: 10 },
+  voiceInput: {
+    color: colors.textPrimary,
+    backgroundColor: colors.surfaceSoft,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
     fontSize: 14,
   },
   debugLine: {
-    color: '#cfcfcf',
+    color: colors.textSecondary,
     fontSize: 12,
     marginBottom: 3,
   },
   debugEvent: {
-    color: '#a7a7a7',
+    color: colors.textMuted,
     fontSize: 11,
     marginBottom: 2,
   },
-  footer:   { textAlign: 'center', color: '#444', fontSize: 12, marginTop: 36 },
+  footer:   { textAlign: 'center', color: colors.textMuted, fontSize: 12, marginTop: spacing.xl },
 });

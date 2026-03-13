@@ -12,6 +12,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { colors, radius, spacing, shadow } from './theme';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -49,7 +50,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#111" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
       <KeyboardAvoidingView
         style={styles.kav}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -58,7 +59,7 @@ export default function HomeScreen() {
         <Animated.View style={[styles.titleWrap, { transform: [{ translateY: titleY }] }]}>
           <Text style={styles.title}>Welcome to</Text>
           <Text style={styles.titleBrand}>Abhaya</Text>
-          <Text style={styles.subtitle}>Your safety companion</Text>
+          <Text style={styles.subtitle}>A calm place built for your safety.</Text>
         </Animated.View>
 
         {/* Login form fades in after slide */}
@@ -92,7 +93,7 @@ export default function HomeScreen() {
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <TouchableOpacity style={styles.btn} onPress={handleSendOtp} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.btn} onPress={handleSendOtp} activeOpacity={0.85}>
             <Text style={styles.btnText}>Send OTP</Text>
           </TouchableOpacity>
         </Animated.View>
@@ -104,40 +105,40 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#111',
+    backgroundColor: colors.background,
   },
   kav: {
     flex: 1,
-    paddingHorizontal: 28,
+    paddingHorizontal: spacing.xl,
     justifyContent: 'center',
   },
   titleWrap: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: spacing.xxl,
   },
   title: {
-    fontSize: 22,
-    color: '#aaa',
+    fontSize: 20,
+    color: colors.textSecondary,
     fontWeight: '400',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
   titleBrand: {
     fontSize: 52,
     fontWeight: '800',
-    color: '#c0392b',
+    color: colors.accent,
     letterSpacing: 2,
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
-    marginTop: 4,
+    color: colors.textMuted,
+    marginTop: 8,
     letterSpacing: 0.5,
   },
   form: {
     width: '100%',
   },
   label: {
-    color: '#aaa',
+    color: colors.textSecondary,
     fontSize: 13,
     marginBottom: 6,
     marginTop: 16,
@@ -145,60 +146,61 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   nameInput: {
-    backgroundColor: '#1e1e1e',
-    color: '#ffffff',
-    borderRadius: 10,
-    paddingHorizontal: 16,
+    backgroundColor: colors.surface,
+    color: colors.textPrimary,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
     paddingVertical: 14,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#2a2a2a',
+    borderColor: colors.borderSubtle,
   },
   input: {
-    backgroundColor: '#1e1e1e',
-    color: '#ffffff',
-    borderRadius: 10,
-    paddingHorizontal: 16,
+    backgroundColor: colors.surface,
+    color: colors.textPrimary,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
     paddingVertical: 14,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#2a2a2a',
+    borderColor: colors.borderSubtle,
     flex: 1,
   },
   phoneRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
   countryCode: {
-    backgroundColor: '#1e1e1e',
-    borderRadius: 10,
-    paddingHorizontal: 14,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.sm + 4,
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: '#2a2a2a',
+    borderColor: colors.borderSubtle,
   },
   countryText: {
-    color: '#fff',
+    color: colors.textPrimary,
     fontSize: 16,
   },
   phoneInput: {
     flex: 1,
   },
   error: {
-    color: '#e74c3c',
+    color: colors.textDanger,
     fontSize: 13,
     marginTop: 10,
   },
   btn: {
-    backgroundColor: '#c0392b',
-    borderRadius: 12,
+    backgroundColor: colors.accent,
+    borderRadius: radius.lg,
     paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 28,
+    marginTop: spacing.xl,
+    ...shadow.soft,
   },
   btnText: {
-    color: '#fff',
+    color: colors.textPrimary,
     fontSize: 17,
     fontWeight: '700',
     letterSpacing: 0.5,

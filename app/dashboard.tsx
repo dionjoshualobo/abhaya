@@ -32,6 +32,7 @@ import {
   parseVoiceCodeWords,
   VOICE_SOS_STORAGE_KEYS,
 } from './voiceSosSettings';
+import { colors, radius, shadow, spacing } from './theme';
 
 const SHAKE_THRESHOLD = 5.0;  // MUST match backend ANOMALY_THRESHOLD and backgroundMotion.ts
 const MOTION_LOG_INTERVAL_MS = 1000;
@@ -658,27 +659,44 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#111" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Abhaya</Text>
+        <View>
+          <Text style={styles.appName}>Abhaya</Text>
+          <Text style={styles.appTagline}>You are not alone here.</Text>
+        </View>
         <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/contacts')} activeOpacity={0.7}>
-            <Ionicons name="people-outline" size={24} color="#ccc" />
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => router.push('/contacts')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="people-outline" size={23} color={colors.textSecondary} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/settings')} activeOpacity={0.7}>
-            <Ionicons name="settings-outline" size={24} color="#ccc" />
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => router.push('/settings')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="settings-outline" size={23} color={colors.textSecondary} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn} onPress={() => router.push({ pathname: '/profile', params: { username, phone } })} activeOpacity={0.7}>
-            <Ionicons name="person-circle-outline" size={26} color="#ccc" />
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => router.push({ pathname: '/profile', params: { username, phone } })}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="person-circle-outline" size={26} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
       </View>
 
-      <Text style={styles.greeting}>
-        Hello, <Text style={styles.name}>{username ?? 'User'}</Text>
-      </Text>
+      <View style={styles.greetingRow}>
+        <Text style={styles.greetingLabel}>Hi,</Text>
+        <Text style={styles.greetingName}>{username ?? 'friend'}</Text>
+      </View>
+      <Text style={styles.greetingSub}>This screen is your safe button — always here for you.</Text>
 
       {/* SOS Button */}
       <View style={styles.sosArea}>
@@ -700,11 +718,15 @@ export default function DashboardScreen() {
         <Animated.View style={{ transform: [{ scale: btnScale }] }}>
           <TouchableOpacity
             style={[styles.sosBtn, active && styles.sosBtnActive]}
-            onPress={toggleAlarm}
-            activeOpacity={0.85}
+            onPress={active ? toggleAlarm : undefined}
+            onLongPress={!active ? toggleAlarm : undefined}
+            delayLongPress={700}
+            activeOpacity={0.9}
           >
             <Text style={styles.sosLabel}>SOS</Text>
-            <Text style={styles.sosHint}>{active ? 'TAP TO STOP' : 'TAP TO ALERT'}</Text>
+            <Text style={styles.sosHint}>
+              {active ? 'Tap to stop alert' : 'Press & hold to send'}
+            </Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -715,25 +737,49 @@ export default function DashboardScreen() {
 
       {/* Feature nav grid */}
       <View style={styles.navGrid}>
-        <TouchableOpacity style={styles.navBtn} onPress={() => router.push('/places')} activeOpacity={0.8}>
-          <Ionicons name="location-outline" size={22} color="#c0392b" />
-          <Text style={styles.navLabel}>Safe Places</Text>
+        <TouchableOpacity style={styles.navBtn} onPress={() => router.push('/places')} activeOpacity={0.85}>
+          <View style={styles.navIconPill}>
+            <Ionicons name="location-outline" size={20} color={colors.accentStrong} />
+          </View>
+          <View style={styles.navTextWrap}>
+            <Text style={styles.navLabel}>Safe Places</Text>
+            <Text style={styles.navSubtitle}>Mark homes, hostels and trusted spots.</Text>
+          </View>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navBtn} onPress={() => router.push('/heatmap')} activeOpacity={0.8}>
-          <Ionicons name="map-outline" size={22} color="#c0392b" />
-          <Text style={styles.navLabel}>Heatmap</Text>
+        <TouchableOpacity style={styles.navBtn} onPress={() => router.push('/heatmap')} activeOpacity={0.85}>
+          <View style={[styles.navIconPill, styles.navIconWarning]}>
+            <Ionicons name="map-outline" size={20} color={colors.warning} />
+          </View>
+          <View style={styles.navTextWrap}>
+            <Text style={styles.navLabel}>Danger Heatmap</Text>
+            <Text style={styles.navSubtitle}>See and report unsafe areas.</Text>
+          </View>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navBtn} onPress={() => router.push({ pathname: '/profile', params: { username, phone } })} activeOpacity={0.8}>
-          <Ionicons name="person-outline" size={22} color="#c0392b" />
-          <Text style={styles.navLabel}>Profile</Text>
+        <TouchableOpacity
+          style={styles.navBtn}
+          onPress={() => router.push({ pathname: '/profile', params: { username, phone } })}
+          activeOpacity={0.85}
+        >
+          <View style={styles.navIconPill}>
+            <Ionicons name="person-outline" size={20} color={colors.accentStrong} />
+          </View>
+          <View style={styles.navTextWrap}>
+            <Text style={styles.navLabel}>Profile & Contacts</Text>
+            <Text style={styles.navSubtitle}>Keep trusted people close.</Text>
+          </View>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navBtn}
           onPress={() => router.push({ pathname: '/transport', params: { username, phone } })}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
         >
-          <Ionicons name="car-outline" size={22} color="#c0392b" />
-          <Text style={styles.navLabel}>Transport</Text>
+          <View style={styles.navIconPill}>
+            <Ionicons name="car-outline" size={20} color={colors.accentStrong} />
+          </View>
+          <View style={styles.navTextWrap}>
+            <Text style={styles.navLabel}>Transport Safety</Text>
+            <Text style={styles.navSubtitle}>Share cab or ride details.</Text>
+          </View>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -744,71 +790,131 @@ const BTN_SIZE  = 200;
 const RING_SIZE = BTN_SIZE + 60;
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#111' },
+  safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
   },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#c0392b', letterSpacing: 1.5 },
+  appName: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.accent,
+    letterSpacing: 1.4,
+  },
+  appTagline: {
+    marginTop: 2,
+    color: colors.textMuted,
+    fontSize: 12,
+  },
   headerIcons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  iconBtn:     { padding: 6 },
-  greeting:    { fontSize: 16, color: '#888', paddingHorizontal: 24, marginBottom: 8 },
-  name:        { color: '#fff', fontWeight: '600' },
+  iconBtn: {
+    padding: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+  },
+  greetingRow: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
+  },
+  greetingLabel: {
+    color: colors.textSecondary,
+    fontSize: 16,
+  },
+  greetingName: {
+    color: colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  greetingSub: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: 4,
+    color: colors.textMuted,
+    fontSize: 13,
+  },
   sosArea: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   navGrid: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    gap: 10,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    gap: spacing.sm,
   },
   navBtn: {
-    flex: 1,
-    backgroundColor: '#1e1e1e',
-    borderRadius: 12,
-    paddingVertical: 14,
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#2a2a2a',
+    borderColor: colors.borderSubtle,
+    marginBottom: spacing.sm,
   },
-  navLabel: { color: '#ccc', fontSize: 11, fontWeight: '600', textAlign: 'center' },
+  navIconPill: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.accentSoft,
+    marginRight: spacing.sm,
+  },
+  navIconWarning: {
+    backgroundColor: 'rgba(251,191,36,0.1)',
+  },
+  navTextWrap: {
+    flex: 1,
+  },
+  navLabel: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  navSubtitle: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 2,
+  },
   ring: {
     position: 'absolute',
     width: RING_SIZE,
     height: RING_SIZE,
     borderRadius: RING_SIZE / 2,
-    backgroundColor: '#c0392b',
+    backgroundColor: colors.accentSoft,
   },
-  ring2: { backgroundColor: '#922b21' },
+  ring2: { backgroundColor: 'rgba(220,38,38,0.22)' },
   sosBtn: {
     width: BTN_SIZE,
     height: BTN_SIZE,
     borderRadius: BTN_SIZE / 2,
-    backgroundColor: '#1e1e1e',
+    backgroundColor: colors.surfaceElevated,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 5,
-    borderColor: '#c0392b',
-    elevation: 10,
-    shadowColor: '#c0392b',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 20,
+    borderWidth: 3,
+    borderColor: colors.accent,
+    ...shadow.accentGlow,
   },
-  sosBtnActive: { backgroundColor: '#c0392b', borderColor: '#fff' },
-  sosLabel:     { fontSize: 52, fontWeight: '900', color: '#fff', letterSpacing: 4 },
-  sosHint:      { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.75)', letterSpacing: 1.5, marginTop: 4 },
+  sosBtnActive: { backgroundColor: colors.accent, borderColor: colors.textPrimary },
+  sosLabel:     { fontSize: 52, fontWeight: '900', color: colors.textPrimary, letterSpacing: 4 },
+  sosHint: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    letterSpacing: 1.5,
+    marginTop: 6,
+  },
   alarmBanner: {
-    backgroundColor: '#c0392b',
-    color: '#fff',
+    backgroundColor: colors.accent,
+    color: colors.textPrimary,
     textAlign: 'center',
     paddingVertical: 14,
     fontSize: 15,
