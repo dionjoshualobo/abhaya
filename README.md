@@ -100,8 +100,6 @@ TWILIO_ACCOUNT_SID=your_twilio_sid
 TWILIO_AUTH_TOKEN=your_twilio_token
 TWILIO_PHONE_NUMBER=your_twilio_phone
 GEMINI_API_KEY=your_gemini_api_key
-FIREBASE_CREDENTIALS_PATH=./firebase-credentials.json
-FIREBASE_DATABASE_URL=your_firebase_url
 BACKEND_PUBLIC_BASE_URL=your_public_backend_url
 ```
 > **Important:** `BACKEND_PUBLIC_BASE_URL` should be a publicly reachable URL (e.g., using ngrok) for live tracking links in SMS. **Never commit real secrets to version control.**
