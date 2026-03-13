@@ -27,6 +27,7 @@ from routes.contacts import contacts_bp
 from routes.places import places_bp
 from routes.checkin import checkin_bp
 from routes.tracking import tracking_bp
+from routes.transport import transport_bp
 
 app.register_blueprint(health_bp)
 app.register_blueprint(alert_bp)
@@ -36,6 +37,7 @@ app.register_blueprint(contacts_bp)
 app.register_blueprint(places_bp)
 app.register_blueprint(checkin_bp)
 app.register_blueprint(tracking_bp)
+app.register_blueprint(transport_bp)
 
 # Create all tables on startup
 with app.app_context():

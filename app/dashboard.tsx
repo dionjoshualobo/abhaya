@@ -721,6 +721,14 @@ export default function DashboardScreen() {
           <Ionicons name="person-outline" size={22} color="#c0392b" />
           <Text style={styles.navLabel}>Profile</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.navBtn}
+          onPress={() => router.push({ pathname: '/transport', params: { username, phone } })}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="car-outline" size={22} color="#c0392b" />
+          <Text style={styles.navLabel}>Transport</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );

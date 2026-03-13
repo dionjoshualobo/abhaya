@@ -17,6 +17,29 @@ export const checkHealth = () => api.get('/health');
 export const sendAlert = (latitude: number, longitude: number, personName?: string) =>
   api.post('/alert', { latitude, longitude, person_name: personName });
 
+export const sendTransportAlert = (payload: {
+  latitude: number;
+  longitude: number;
+  personName?: string;
+  vehicle?: string;
+  plateNumber?: string;
+  driverName?: string;
+  details?: string;
+  fromLocation?: string;
+  toLocation?: string;
+}) =>
+  api.post('/transport/notify', {
+    latitude: payload.latitude,
+    longitude: payload.longitude,
+    person_name: payload.personName,
+    vehicle: payload.vehicle,
+    plate_number: payload.plateNumber,
+    driver_name: payload.driverName,
+    details: payload.details,
+    from_location: payload.fromLocation,
+    to_location: payload.toLocation,
+  });
+
 export const updateLiveTracking = (token: string, latitude: number, longitude: number) =>
   api.post('/tracking/update', { token, latitude, longitude });
 

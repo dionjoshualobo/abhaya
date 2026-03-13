@@ -37,6 +37,7 @@ export default function RootLayout() {
         <Stack.Screen name="contacts" />
         <Stack.Screen name="places" />
         <Stack.Screen name="heatmap" />
+        <Stack.Screen name="transport" />
       </Stack>
     </>
   );
