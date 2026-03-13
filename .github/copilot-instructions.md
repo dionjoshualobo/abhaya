@@ -14,7 +14,7 @@ Fast2SMS, danger heatmap via Firebase, disguised calculator UI.
 ## Stack
 
 Frontend: React Native, Expo, Firebase Realtime DB, React Native Maps
-Backend: Flask, Fast2SMS, Gemini API, Firebase Admin SDK
+Backend: Flask, Fast2SMS (SMS), Gemini API, Firebase Admin SDK
 
 ## Rules
 

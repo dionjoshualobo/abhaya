@@ -1,0 +1,47 @@
+from flask import Flask
+from flask_cors import CORS
+from dotenv import load_dotenv
+from extensions import db
+import os
+
+load_dotenv()
+
+app = Flask(__name__)
+CORS(app)
+
+# SQLite database — stored as abhaya.db in the backend folder
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///abhaya.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db.init_app(app)
+
+# Import models so tables are created
+import models
+
+# Register blueprints
+from routes.health import health_bp
+from routes.alert import alert_bp
+from routes.heatmap import heatmap_bp
+from routes.anomaly import anomaly_bp
+from routes.contacts import contacts_bp
+from routes.places import places_bp
+from routes.checkin import checkin_bp
+from routes.tracking import tracking_bp
+from routes.transport import transport_bp
+
+app.register_blueprint(health_bp)
+app.register_blueprint(alert_bp)
+app.register_blueprint(heatmap_bp)
+app.register_blueprint(anomaly_bp)
+app.register_blueprint(contacts_bp)
+app.register_blueprint(places_bp)
+app.register_blueprint(checkin_bp)
+app.register_blueprint(tracking_bp)
+app.register_blueprint(transport_bp)
+
+# Create all tables on startup
+with app.app_context():
+    db.create_all()
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)

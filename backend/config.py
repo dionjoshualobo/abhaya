@@ -1,0 +1,16 @@
+import os
+
+# Twilio
+TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
+TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
+TWILIO_PHONE_NUMBER = os.getenv('TWILIO_PHONE_NUMBER')
+
+# Gemini
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+
+# Firebase
+FIREBASE_CREDENTIALS_PATH = os.getenv('FIREBASE_CREDENTIALS_PATH')
+FIREBASE_DATABASE_URL = os.getenv('FIREBASE_DATABASE_URL')
+
+# Public base URL for links sent in SMS (use ngrok/cloud URL in real usage)
+BACKEND_PUBLIC_BASE_URL = os.getenv('BACKEND_PUBLIC_BASE_URL')
